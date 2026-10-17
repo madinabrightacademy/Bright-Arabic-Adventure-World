@@ -23,6 +23,39 @@ export interface Island {
   skillCount: number;
 }
 
+export interface SkillRule {
+  title: string;
+  explanation: string;
+  exampleAr?: string;
+  exampleTranslit?: string;
+  exampleId?: string;
+}
+
+export interface SkillExplanation {
+  conceptTitle: string; // Judul konsep yang mudah dipahami
+  overview: string; // Penjelasan bahasa manusia yang santai dan jelas
+  rules: SkillRule[]; // Kaidah/rumus penting
+  hudhudTips?: string; // Tips trik dari Hudhud
+  keyVocabOrPhrases?: {
+    ar: string;
+    translit: string;
+    id: string;
+    type?: string;
+  }[];
+}
+
+export interface PracticeQuestion {
+  id: string;
+  question: string;
+  questionAr?: string;
+  options: {
+    text: string;
+    isCorrect: boolean;
+    feedback?: string;
+  }[];
+  hint?: string;
+}
+
 export interface SkillItem {
   skill_id: string;
   owner_island: IslandId;
@@ -32,6 +65,8 @@ export interface SkillItem {
   audience: AudienceType;
   scope: string;
   icon?: string;
+  explanation?: SkillExplanation;
+  customQuestions?: PracticeQuestion[];
 }
 
 export interface Lexeme {
@@ -93,6 +128,24 @@ export interface UserProfile {
   wordsMastered: string[]; // lexeme ids
   difficultWords: string[]; // lexeme ids needing review (Buku Kata Sulit)
   companionRoomDecorations: string[];
+  achievements?: string[]; // unlocked achievement IDs
+  dailyMissionsCompletedCount?: number; // total daily missions completed
+  iqraProgress?: {
+    currentJilid: number; // 1 - 6
+    masteredCards: string[];
+    starsEarned: number;
+    completedPages?: string[]; // e.g. ['iq1_p1', 'iq1_p2']
+    pageStars?: Record<string, number>;
+    lastReadPageId?: string;
+    totalWordsRead?: number;
+  };
+  streakShields?: number; // Pelindung streak aktif
+  lastStreakClaimDate?: string;
+  dailyAdabCompleted?: string[]; // list of adab IDs completed today
+  adabBarakahPoints?: number; // Poin berkah adab
+  dailyTargetChestClaimedDate?: string;
+  dailyReadingCount?: number; // kata/huruf iqra dibaca hari ini
+  dailyMinutesCount?: number; // menit belajar hari ini
 }
 
 export interface LeaderboardEntry {

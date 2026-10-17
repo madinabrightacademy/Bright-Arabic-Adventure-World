@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Play, Volume2, Award, BookOpen, Layers, CheckCircle2, ChevronRight, Star, Heart, ShoppingBag, Compass } from 'lucide-react';
+import {
+  Sparkles,
+  Play,
+  Volume2,
+  Award,
+  BookOpen,
+  Layers,
+  CheckCircle2,
+  ChevronRight,
+  Star,
+  Compass,
+  Filter,
+  Check,
+  RotateCcw,
+  HelpCircle,
+  TrendingUp
+} from 'lucide-react';
 import { UserProfile, Island } from '../types/game';
 import { sound } from '../services/sound';
 import { GameStorage } from '../services/storage';
+import { IslandModalLayout } from './IslandModalLayout';
 
 interface PulauMufradatHubModalProps {
   island: Island;
@@ -13,8 +30,10 @@ interface PulauMufradatHubModalProps {
   onReward: (xp: number, stars: number) => void;
 }
 
-interface VocabularyCard {
+export interface VocabularyCard {
   id: string;
+  level: number; // 0 to 5
+  levelLabel: string;
   name_ar: string;
   translit: string;
   meaning: string;
@@ -24,37 +43,111 @@ interface VocabularyCard {
   exampleMeaning: string;
 }
 
-const THEMATIC_VOCAB_COLLECTION: Record<string, VocabularyCard[]> = {
-  'Makanan & Minuman': [
-    { id: 'v1', name_ar: 'خُبْز', translit: 'khubz', meaning: 'Roti gandum hangat', category: 'Makanan', emoji: '🍞', exampleSentence: 'آكُلُ الخُبْزَ فِي الصَّبَاحِ', exampleMeaning: 'Saya makan roti di pagi hari' },
-    { id: 'v2', name_ar: 'مَاء', translit: 'māʾ', meaning: 'Air tawar segar', category: 'Makanan', emoji: '💧', exampleSentence: 'أَشْرَبُ مَاءً بَارِدًا', exampleMeaning: 'Saya minum air dingin yang segar' },
-    { id: 'v3', name_ar: 'حَلِيب', translit: 'ḥalīb', meaning: 'Susu murni sehat', category: 'Makanan', emoji: '🥛', exampleSentence: 'الحَلِيبُ مُفِيدٌ لِلْجِسْمِ', exampleMeaning: 'Susu sangat bermanfaat bagi tubuh' },
-    { id: 'v4', name_ar: 'تَمْر', translit: 'tamr', meaning: 'Kurma manis berkah', category: 'Makanan', emoji: '🌴', exampleSentence: 'التَّمْرُ حُلْوٌ وَلَذِيذٌ', exampleMeaning: 'Kurma itu manis dan lezat' },
-    { id: 'v5', name_ar: 'تُفَّاحَة', translit: 'tuffāḥah', meaning: 'Buah apel ranum', category: 'Makanan', emoji: '🍎', exampleSentence: 'هٰذِهِ تُفَّاحَةٌ حَمْرَاءُ', exampleMeaning: 'Ini adalah buah apel merah' },
-    { id: 'v6', name_ar: 'شَاي', translit: 'shāy', meaning: 'Teh harum hangat', category: 'Makanan', emoji: '🫖', exampleSentence: 'أَشْرَبُ الشَّايَ مَعَ أَبِي', exampleMeaning: 'Saya minum teh bersama ayahku' },
-  ],
-  'Hewan & Alam': [
-    { id: 'v7', name_ar: 'قِطَّة', translit: 'qiṭṭah', meaning: 'Kucing rumahan', category: 'Hewan', emoji: '🐱', exampleSentence: 'القِطَّةُ جَمِيلَةٌ وَصَغِيرَةٌ', exampleMeaning: 'Kucing itu cantik dan mungil' },
-    { id: 'v8', name_ar: 'سَمَكَة', translit: 'samakah', meaning: 'Ikan air jernih', category: 'Hewan', emoji: '🐟', exampleSentence: 'السَّمَكَةُ تَسْبَحُ فِي المَاءِ', exampleMeaning: 'Ikan itu berenang di dalam air' },
-    { id: 'v9', name_ar: 'جَمَل', translit: 'jamal', meaning: 'Unta padang pasir', category: 'Hewan', emoji: '🐪', exampleSentence: 'الجَمَلُ سَفِينَةُ الصَّحْرَاءِ', exampleMeaning: 'Unta adalah perahu padang pasir' },
-    { id: 'v10', name_ar: 'حِصَان', translit: 'ḥiṣān', meaning: 'Kuda tangkas gagah', category: 'Hewan', emoji: '🐴', exampleSentence: 'الحِصَانُ سَرِيعٌ جِدًّا', exampleMeaning: 'Kuda itu berlari sangat cepat' },
-    { id: 'v11', name_ar: 'طَائِر', translit: 'ṭāʾir', meaning: 'Burung berkicau', category: 'Hewan', emoji: '🐦', exampleSentence: 'الطَّائِرُ يَطِيرُ فِي السَّمَاءِ', exampleMeaning: 'Burung terbang di angkasa' },
-  ],
-  'Sekolah & Alat': [
-    { id: 'v12', name_ar: 'كِتَاب', translit: 'kitāb', meaning: 'Kitab buku panduan', category: 'Sekolah', emoji: '📖', exampleSentence: 'أَقْرَأُ كِتَابَ اللُّغَةِ العَرَبِيَّةِ', exampleMeaning: 'Saya membaca kitab bahasa Arab' },
-    { id: 'v13', name_ar: 'قَلَم', translit: 'qalam', meaning: 'Pena gores tinta', category: 'Sekolah', emoji: '🖊️', exampleSentence: 'أَكْتُبُ بِالقَلَمِ فِي الدَّفْتَرِ', exampleMeaning: 'Saya menulis dengan pena di buku catatan' },
-    { id: 'v14', name_ar: 'مَدْرَسَة', translit: 'madrasah', meaning: 'Sekolah tempat belajar', category: 'Sekolah', emoji: '🏫', exampleSentence: 'أَذْهَبُ إِلَى المَدْرَسَةِ صَبَاحًا', exampleMeaning: 'Saya pergi ke sekolah di pagi hari' },
-    { id: 'v15', name_ar: 'حَاسُوب', translit: 'ḥāsūb', meaning: 'Komputer canggih', category: 'Sekolah', emoji: '💻', exampleSentence: 'الحَاسُوبُ جِهَازٌ حَدِيثٌ', exampleMeaning: 'Komputer adalah perangkat modern' },
-  ],
-  'Angka Arab (١–١٠)': [
-    { id: 'v16', name_ar: 'وَاحِد (١)', translit: 'wāḥid', meaning: 'Satu', category: 'Angka', emoji: '1️⃣', exampleSentence: 'قَلَمٌ وَاحِدٌ', exampleMeaning: 'Satu buah pena' },
-    { id: 'v17', name_ar: 'اِثْنَان (٢)', translit: 'ithnān', meaning: 'Dua', category: 'Angka', emoji: '2️⃣', exampleSentence: 'كِتَابَانِ اثْنَانِ', exampleMeaning: 'Dua buah kitab' },
-    { id: 'v18', name_ar: 'ثَلَاثَة (٣)', translit: 'thalāthah', meaning: 'Tiga', category: 'Angka', emoji: '3️⃣', exampleSentence: 'ثَلَاثَةُ كُتُبٍ', exampleMeaning: 'Tiga buah buku' },
-    { id: 'v19', name_ar: 'أَرْبَعَة (٤)', translit: 'arbaʿah', meaning: 'Empat', category: 'Angka', emoji: '4️⃣', exampleSentence: 'أَرْبَعَةُ أَيَّامٍ', exampleMeaning: 'Empat hari' },
-    { id: 'v20', name_ar: 'خَمْسَة (٥)', translit: 'khamsah', meaning: 'Lima', category: 'Angka', emoji: '5️⃣', exampleSentence: 'خَمْسُ صَلَوَاتٍ', exampleMeaning: 'Lima waktu shalat' },
-    { id: 'v21', name_ar: 'عَشَرَة (١٠)', translit: 'ʿasharah', meaning: 'Sepuluh', category: 'Angka', emoji: '🔟', exampleSentence: 'عَشَرَةُ طُلَّابٍ', exampleMeaning: 'Sepuluh siswa' },
-  ]
-};
+const THEMATIC_VOCAB_COLLECTION: VocabularyCard[] = [
+  // ==================== LEVEL 0: TAMHIDI (Pra-A1) ====================
+  // Angka Satuan
+  { id: 'v_w1', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'وَاحِد', translit: 'wāḥid', meaning: 'Satu (1)', category: 'Angka Satuan', emoji: '1️⃣', exampleSentence: 'قَلَمٌ وَاحِدٌ عَلَى الطَّاوِلَةِ', exampleMeaning: 'Satu pena di atas meja' },
+  { id: 'v_w2', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'اِثْنَان', translit: 'ithnān', meaning: 'Dua (2)', category: 'Angka Satuan', emoji: '2️⃣', exampleSentence: 'عِنْدِي كِتَابَانِ اثْنَانِ', exampleMeaning: 'Saya memiliki dua buah buku' },
+  { id: 'v_w3', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'ثَلَاثَة', translit: 'thalāthah', meaning: 'Tiga (3)', category: 'Angka Satuan', emoji: '3️⃣', exampleSentence: 'ثَلَاثَةُ رِجَالٍ فِي السَّفِينَةِ', exampleMeaning: 'Tiga orang pria di atas kapal' },
+  { id: 'v_w4', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'خَمْسَة', translit: 'khamsah', meaning: 'Lima (5)', category: 'Angka Satuan', emoji: '5️⃣', exampleSentence: 'خَمْسُ صَلَوَاتٍ فِي اليَوْمِ', exampleMeaning: 'Lima shalat dalam sehari semalam' },
+  { id: 'v_w5', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'عَشَرَة', translit: 'ʿasharah', meaning: 'Sepuluh (10)', category: 'Angka Satuan', emoji: '🔟', exampleSentence: 'عَشَرَةُ دَنَانِيرَ ذَهَبِيَّةٍ', exampleMeaning: 'Sepuluh dinar emas murni' },
+
+  // Warna Alami
+  { id: 'v_c1', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَحْمَر', translit: 'aḥmar', meaning: 'Merah cerah', category: 'Spektrum Warna', emoji: '🔴', exampleSentence: 'شِرَاعُ القَارِبِ أَحْمَرُ', exampleMeaning: 'Layar perahu itu berwarna merah' },
+  { id: 'v_c2', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَزْرَق', translit: 'azraq', meaning: 'Biru samudra', category: 'Spektrum Warna', emoji: '🔵', exampleSentence: 'البَحْرُ أَزْرَقُ وَجَمِيلٌ', exampleMeaning: 'Laut itu biru dan mempesona' },
+  { id: 'v_c3', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَخْضَر', translit: 'akhḍar', meaning: 'Hijau daun kurma', category: 'Spektrum Warna', emoji: '🟢', exampleSentence: 'شَجَرُ النَّخِيلِ أَخْضَرُ', exampleMeaning: 'Pohon kurma itu berwarna hijau' },
+  { id: 'v_c4', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَبْيَض', translit: 'abyaḍ', meaning: 'Putih bersih', category: 'Spektrum Warna', emoji: '⚪', exampleSentence: 'القَمِيصُ أَبْيَضُ وَنَقِيٌّ', exampleMeaning: 'Kemeja itu putih dan bersih' },
+
+  // Keluarga & Kerabat
+  { id: 'v_f1', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَب', translit: 'ab', meaning: 'Ayah tercinta', category: 'Keluarga Inti', emoji: '👨', exampleSentence: 'أَبِي رَجُلٌ طَيِّبٌ وَكَرِيمٌ', exampleMeaning: 'Ayahku adalah pria yang baik dan dermawan' },
+  { id: 'v_f2', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أُمّ', translit: 'umm', meaning: 'Ibu penyayang', category: 'Keluarga Inti', emoji: '👩', exampleSentence: 'الجَنَّةُ تَحْتَ أَقْدَامِ الأُمَّهَاتِ', exampleMeaning: 'Surga berada di bawah telapak kaki ibu' },
+  { id: 'v_f3', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'أَخ', translit: 'akh', meaning: 'Saudara laki-laki', category: 'Keluarga Inti', emoji: '👦', exampleSentence: 'أَخِي يَذْهَبُ مَعِي إِلَى السُّوقِ', exampleMeaning: 'Saudaraku pergi bersamaku ke pasar' },
+
+  // Benda Kelas & Sudut Rumah
+  { id: 'v_s1', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'كِتَاب', translit: 'kitāb', meaning: 'Buku panduan', category: 'Benda Kelas & Belajar', emoji: '📖', exampleSentence: 'هٰذَا كِتَابُ اللُّغَةِ العَرَبِيَّةِ', exampleMeaning: 'Ini buku bahasa Arab' },
+  { id: 'v_s2', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'قَلَم', translit: 'qalam', meaning: 'Pena gores ilmu', category: 'Benda Kelas & Belajar', emoji: '🖊️', exampleSentence: 'أَكْتُبُ بِالقَلَمِ فِي الدَّفْتَرِ', exampleMeaning: 'Saya menulis dengan pena di buku tulis' },
+  { id: 'v_h1', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'بَيْت', translit: 'bayt', meaning: 'Rumah tinggal asri', category: 'Ruangan & Rumah', emoji: '🏠', exampleSentence: 'بَيْتِي جَمِيلٌ وَوَاسِعٌ', exampleMeaning: 'Rumahku indah dan luas' },
+  { id: 'v_h2', level: 0, levelLabel: 'L0 Tamhidi', name_ar: 'مَطْبَخ', translit: 'maṭbakh', meaning: 'Dapur memasak', category: 'Ruangan & Rumah', emoji: '🍳', exampleSentence: 'أُمِّي فِي المَطْبَخِ تُعِدُّ الطَّعَامَ', exampleMeaning: 'Ibuku di dapur menyiapkan hidangan' },
+
+  // ==================== LEVEL 1: MUBTADI' 1 (A1) ====================
+  // Makanan & Minuman
+  { id: 'v_m1', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'خُبْز', translit: 'khubz', meaning: 'Roti gandum hangat', category: 'Makanan & Minuman', emoji: '🍞', exampleSentence: 'آكُلُ الخُبْزَ الطَّازَجَ فِي الصَّبَاحِ', exampleMeaning: 'Saya makan roti gandum hangat di pagi hari' },
+  { id: 'v_m2', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'مَاء', translit: 'māʾ', meaning: 'Air tawar segar', category: 'Makanan & Minuman', emoji: '💧', exampleSentence: 'أَشْرَبُ مَاءً بَارِدًا نَقِيًّا', exampleMeaning: 'Saya minum air dingin yang murni' },
+  { id: 'v_m3', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'تَمْر', translit: 'tamr', meaning: 'Kurma manis berkah', category: 'Makanan & Minuman', emoji: '🌴', exampleSentence: 'التَّمْرُ غِذَاءٌ طَيِّبٌ وَمُبَارَكٌ', exampleMeaning: 'Kurma adalah makanan bergizi dan penuh berkah' },
+  { id: 'v_m4', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'قَهْوَة', translit: 'qahwah', meaning: 'Kopi aromatik Arab', category: 'Makanan & Minuman', emoji: '☕', exampleSentence: 'القَهْوَةُ العَرَبِيَّةُ ذَاتُ رَائِحَةٍ زَكِيَّةٍ', exampleMeaning: 'Kopi Arab memiliki aroma harum yang khas' },
+
+  // Buah & Sayuran
+  { id: 'v_b1', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'تُفَّاحَة', translit: 'tuffāḥah', meaning: 'Buah apel manis', category: 'Buah & Sayur', emoji: '🍎', exampleSentence: 'هٰذِهِ تُفَّاحَةٌ حَمْرَاءُ لَذِيذَةٌ', exampleMeaning: 'Ini buah apel merah yang lezat' },
+  { id: 'v_b2', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'بُرْتُقَال', translit: 'burtuqāl', meaning: 'Buah jeruk segar', category: 'Buah & Sayur', emoji: '🍊', exampleSentence: 'عَصِيرُ البُرْتُقَالِ يُعْطِي النَّشَاطَ', exampleMeaning: 'Jus jeruk memberikan kebugaran raga' },
+
+  // Hewan & Satwa
+  { id: 'v_a1', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'جَمَل', translit: 'jamal', meaning: 'Unta padang pasir', category: 'Hewan & Margasatwa', emoji: '🐪', exampleSentence: 'الجَمَلُ يَسِيرُ صَبُورًا فِي الصَّحْرَاءِ', exampleMeaning: 'Unta melangkah dengan sabar di padang pasir' },
+  { id: 'v_a2', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'حِصَان', translit: 'ḥiṣān', meaning: 'Kuda tangkas gagah', category: 'Hewan & Margasatwa', emoji: '🐴', exampleSentence: 'الحِصَانُ العَرَبِيُّ سَرِيعٌ وَأَصِيلٌ', exampleMeaning: 'Kuda Arab berlari cepat dan bertrah murni' },
+  { id: 'v_a3', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'سَمَكَة', translit: 'samakah', meaning: 'Ikan air jernih', category: 'Hewan & Margasatwa', emoji: '🐟', exampleSentence: 'السَّمَكَةُ تَعِيشُ فِي البَحْرِ النَّقِيِّ', exampleMeaning: 'Ikan hidup di laut yang jernih' },
+
+  // Tubuh & Pakaian
+  { id: 'v_t1', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'عَيْن', translit: 'ʿayn', meaning: 'Mata penglihatan (feminin)', category: 'Tubuh & Indra', emoji: '👁️', exampleSentence: 'العَيْنُ نِعْمَةٌ عَظِيمَةٌ مِنَ اللَّهِ', exampleMeaning: 'Mata adalah kenikmatan agung dari Allah' },
+  { id: 'v_p1', level: 1, levelLabel: 'L1 Mubtadi 1', name_ar: 'ثَوْب', translit: 'thawb', meaning: 'Jubah gamis putih', category: 'Busana & Pakaian', emoji: '👘', exampleSentence: 'يَلْبَسُ الرَّجُلُ ثَوْبًا أَبْيَضَ فِي الجُمُعَةِ', exampleMeaning: 'Pria itu mengenakan jubah putih di hari Jumat' },
+
+  // ==================== LEVEL 2: MUBTADI' 2 (A2) ====================
+  // Fasilitas Publik & Denah Kota
+  { id: 'v_u1', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'مَسْجِد', translit: 'masjid', meaning: 'Masjid tempat sujud', category: 'Fasilitas Kota & Publik', emoji: '🕌', exampleSentence: 'نُصَلِّي الجَمَاعَةَ فِي المَسْجِدِ الكَبِيرِ', exampleMeaning: 'Kami shalat berjamaah di masjid raya' },
+  { id: 'v_u2', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'مَطَار', translit: 'maṭār', meaning: 'Bandar udara internasional', category: 'Fasilitas Kota & Publik', emoji: '🛫', exampleSentence: 'وَصَلَتِ الطَّائِرَةُ إِلَى مَطَارِ جِدَّةَ', exampleMeaning: 'Pesawat telah tiba di bandara Jeddah' },
+  { id: 'v_u3', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'مُسْتَشْفَى', translit: 'mustashfā', meaning: 'Rumah sakit pengobatan', category: 'Fasilitas Kota & Publik', emoji: '🏥', exampleSentence: 'يَعْمَلُ الطَّبِيبُ فِي المُسْتَشْفَى الحَدِيثِ', exampleMeaning: 'Dokter bekerja di rumah sakit modern' },
+
+  // Profesi & Cita-Cita
+  { id: 'v_pr1', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'طَبِيب', translit: 'ṭabīb', meaning: 'Dokter penyembuh', category: 'Profesi & Karir', emoji: '🩺', exampleSentence: 'فَحَصَ الطَّبِيبُ المَرِيضَ بِعِنَايَةٍ', exampleMeaning: 'Dokter memeriksa pasien dengan teliti' },
+  { id: 'v_pr2', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'مُهَنْدِس', translit: 'muhandis', meaning: 'Insinyur perancang', category: 'Profesi & Karir', emoji: '👷', exampleSentence: 'المُهَنْدِسُ يَبْنِي الجِسْرَ القَوِيَّ', exampleMeaning: 'Insinyur membangun jembatan yang kokoh' },
+  { id: 'v_pr3', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'تَاجِر', translit: 'tājir', meaning: 'Saudagar pedagang amanah', category: 'Profesi & Karir', emoji: '💼', exampleSentence: 'التَّاجِرُ الأَمِينُ يُحِبُّهُ النَّاسُ', exampleMeaning: 'Pedagang yang amanah dicintai semua orang' },
+
+  // Transportasi & Fi'il Harian
+  { id: 'v_tr1', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'سَفِينَة', translit: 'safīnah', meaning: 'Kapal laut samudra', category: 'Transportasi & Mobilitas', emoji: '🚢', exampleSentence: 'تَمْخُرُ السَّفِينَةُ أَمْوَاجَ البَحْرِ', exampleMeaning: 'Kapal membelah ombak samudra' },
+  { id: 'v_tr2', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'قِطَار', translit: 'qiṭār', meaning: 'Kereta rel cepat', category: 'Transportasi & Mobilitas', emoji: '🚆', exampleSentence: 'سَافَرْنَا إِلَى المَدِينَةِ بِالقِطَارِ السَّرِيعِ', exampleMeaning: 'Kami bepergian ke Madinah dengan kereta cepat' },
+  { id: 'v_act1', level: 2, levelLabel: 'L2 Mubtadi 2', name_ar: 'قَرَأَ', translit: 'qaraʾa', meaning: 'Telah membaca', category: 'Tindakan Harian (Fi\'il)', emoji: '📖', exampleSentence: 'قَرَأَ الوَلَدُ سُورَةَ الفَاتِحَةِ بِخُشُوعٍ', exampleMeaning: 'Anak itu membaca Surah Al-Fatihah dengan khusyuk' },
+
+  // ==================== LEVEL 3: MUTAWASSITH 1 (B1) ====================
+  // Sifat & Karakter
+  { id: 'v_sf1', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'كَرِيم', translit: 'karīm', meaning: 'Mulia dermawan', category: 'Sifat & Karakter', emoji: '🎁', exampleSentence: 'رَجُلٌ كَرِيمٌ يُطْعِمُ المَسَاكِينَ', exampleMeaning: 'Seorang pria dermawan memberi makan kaum miskin' },
+  { id: 'v_sf2', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'شُجَاع', translit: 'shujāʿ', meaning: 'Pemberani ksatria', category: 'Sifat & Karakter', emoji: '🦁', exampleSentence: 'الجُنْدِيُّ شُجَاعٌ فِي حِمَايَةِ الوَطَنِ', exampleMeaning: 'Prajurit itu gagah berani menjaga tanah air' },
+
+  // Jamak Taksir Populer
+  { id: 'v_jt1', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'كُتُب', translit: 'kutub', meaning: 'Buku-buku (jamak kitāb)', category: 'Jamak Taksir Berfrekuensi', emoji: '📚', exampleSentence: 'فِي المَكْتَبَةِ كُتُبٌ كَثِيرَةٌ نَافِعَةٌ', exampleMeaning: 'Di perpustakaan terdapat banyak buku bermanfaat' },
+  { id: 'v_jt2', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'مَسَاجِد', translit: 'masājid', meaning: 'Masjid-masjid (jamak masjid)', category: 'Jamak Taksir Berfrekuensi', emoji: '🕌', exampleSentence: 'المَسَاجِدُ بُيُوتُ اللَّهِ فِي الأَرْضِ', exampleMeaning: 'Masjid-masjid adalah rumah Allah di muka bumi' },
+
+  // Geografi & Bentang Alam
+  { id: 'v_geo1', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'جَبَل', translit: 'jabal', meaning: 'Gunung menjulang kokoh', category: 'Geografi & Bentang Alam', emoji: '⛰️', exampleSentence: 'جَبَلُ أُحُدٍ يُحِبُّنَا وَنُحِبُّهُ', exampleMeaning: 'Gunung Uhud mencintai kita dan kita mencintainya' },
+  { id: 'v_geo2', level: 3, levelLabel: 'L3 Mutawassith 1', name_ar: 'نَهْر', translit: 'nahr', meaning: 'Sungai mengalir jernih', category: 'Geografi & Bentang Alam', emoji: '🏞️', exampleSentence: 'مَاءُ النَّهْرِ عَذْبٌ فُرَاتٌ', exampleMeaning: 'Air sungai itu tawar dan menyegarkan' },
+
+  // ==================== LEVEL 4: MUTAWASSITH 2 (B2) ====================
+  // Sains & Teknologi Digital
+  { id: 'v_sc1', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'حَاسُوب', translit: 'ḥāsūb', meaning: 'Komputer digital prosesor', category: 'Sains & Teknologi Digital', emoji: '💻', exampleSentence: 'الحَاسُوبُ يُسَاعِدُ البَاحِثِينَ فِي الحِسَابَاتِ', exampleMeaning: 'Komputer membantu peneliti dalam kalkulasi data' },
+  { id: 'v_sc2', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'شَبَكَة', translit: 'shabakah', meaning: 'Jaringan internet dunia', category: 'Sains & Teknologi Digital', emoji: '🌐', exampleSentence: 'نَتَوَاصَلُ عَبْرَ الشَّبَكَةِ العَالَمِيَّةِ لَحْظِيًّا', exampleMeaning: 'Kita berkomunikasi via jaringan dunia seketika' },
+
+  // Bisnis & Korporasi
+  { id: 'v_bs1', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'شَرِكَة', translit: 'sharikah', meaning: 'Perusahaan korporasi', category: 'Bisnis & Manajemen', emoji: '🏢', exampleSentence: 'أَسَّسَ الشَّبَابُ شَرِكَةً رَقْمِيَّةً نَاجِحَةً', exampleMeaning: 'Pemuda itu mendirikan perusahaan digital yang sukses' },
+  { id: 'v_bs2', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'إِدَارَة', translit: 'idārah', meaning: 'Manajemen kepengurusan', category: 'Bisnis & Manajemen', emoji: '📊', exampleSentence: 'الإِدَارَةُ الحَكِيمَةُ سَبَبُ نَجَاحِ المَشْرُوعِ', exampleMeaning: 'Manajemen yang bijak adalah kunci sukses proyek' },
+
+  // Idiom & Pepatah
+  { id: 'v_id1', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'يَدًا بِيَد', translit: 'yadan bi-yad', meaning: 'Bahu membahu bergandengan tangan', category: 'Idiom & Metafora', emoji: '🤝', exampleSentence: 'نَعْمَلُ يَدًا بِيَدٍ لِرِفْعَةِ الأُمَّةِ', exampleMeaning: 'Kita bekerja bahu membahu demi kemajuan umat' },
+  { id: 'v_id2', level: 4, levelLabel: 'L4 Mutawassith 2', name_ar: 'مِنْ صَمِيمِ القَلْب', translit: 'min ṣamīmi l-qalb', meaning: 'Dari lubuk hati yang paling dalam', category: 'Idiom & Metafora', emoji: '💖', exampleSentence: 'أَشْكُرُكُمْ مِنْ صَمِيمِ القَلْبِ عَلَى دَعْمِكُمْ', exampleMeaning: 'Saya berterima kasih dari lubuk hati terdalam' },
+
+  // ==================== LEVEL 5: MUTAQADDIM (C1-C2) ====================
+  // Taraduf & Nuansa Semantik
+  { id: 'v_tr1', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'فَرَح / سُرُور', translit: 'faraḥ vs surūr', meaning: 'Gembira lahiriah vs Bahagia batin tenang', category: 'Nuansa Semantik (Taraduf)', emoji: '😊💖', exampleSentence: 'الفَرَحُ يَبْدُو عَلَى الوَجْهِ وَالسُّرُورُ يَسْكُنُ الفُؤَادَ', exampleMeaning: 'Farah tampak di wajah, sedang surur bersemayam di hati' },
+  { id: 'v_tr2', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'مَطَر / غَيْث', translit: 'maṭar vs ghayth', meaning: 'Hujan biasa/azab vs Hujan rahmat penolong', category: 'Nuansa Semantik (Taraduf)', emoji: '🌧️🌱', exampleSentence: 'نَزَلَ الغَيْثُ فَأَحْيَا الأَرْضَ بَعْدَ مَوْتِهَا', exampleMeaning: 'Hujan rahmat turun dan menghidupkan bumi yang gersang' },
+
+  // Diplomasi & Hukum Internasional
+  { id: 'v_dp1', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'سِيَادَة', translit: 'siyādah', meaning: 'Kedaulatan bangsa merdeka', category: 'Diplomasi & Hukum Antarbangsa', emoji: '👑', exampleSentence: 'الدِّفَاعُ عَنْ سِيَادَةِ الوَطَنِ وَاجِبٌ مُقَدَّسٌ', exampleMeaning: 'Membela kedaulatan tanah air adalah kewajiban mulia' },
+  { id: 'v_dp2', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'مُعَاهَدَة', translit: 'muʿāhadah', meaning: 'Traktat perjanjian internasional', category: 'Diplomasi & Hukum Antarbangsa', emoji: '📜', exampleSentence: 'وَقَّعَتِ الدُّوَلُ مُعَاهَدَةَ السَّلَامِ الدَّائِمِ', exampleMeaning: 'Negara-negara menandatangani traktat perdamaian abadi' },
+
+  // Sastra Arab & Balaghah
+  { id: 'v_lt1', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'قَصِيدَة', translit: 'qaṣīdah', meaning: 'Antologi qasidah puisi tinggi', category: 'Sastra & Balaghah', emoji: '✒️', exampleSentence: 'أَنْشَدَ الشَّاعِرُ قَصِيدَةً عَصْمَاءَ فِي مَدْحِ النَّبِيِّ', exampleMeaning: 'Penyair melantunkan qasidah agung memuji Baginda Nabi' },
+  { id: 'v_lt2', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'اِسْتِعَارَة', translit: 'istiʿārah', meaning: 'Metafora balaghah tingkat tinggi', category: 'Sastra & Balaghah', emoji: '✨', exampleSentence: 'الاسْتِعَارَةُ تَخْلُقُ صُورَةً خَيَالِيَّةً بَدِيعَةً', exampleMeaning: 'Metafora melahirkan imajinasi sastra yang memukau' },
+
+  // Turats & Qur'ani
+  { id: 'v_qr1', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'فُرْقَان', translit: 'furqān', meaning: 'Pembeda hakiki antara haq dan bathil', category: 'Khazanah Turats & Qur\'an', emoji: '📖', exampleSentence: 'تَبَارَكَ الَّذِي نَزَّلَ الفُرْقَانَ عَلَى عَبْدِهِ', exampleMeaning: 'Maha Berkah Allah yang telah menurunkan Al-Furqan' },
+  { id: 'v_qr2', level: 5, levelLabel: 'L5 Mutaqaddim', name_ar: 'سَكِينَة', translit: 'sakīnah', meaning: 'Kedamaian batin ilahi', category: 'Khazanah Turats & Qur\'an', emoji: '🕊️', exampleSentence: 'أَنْزَلَ اللَّهُ سَكِينَتَهُ عَلَى قُلُوبِ الصَّادِقِينَ', exampleMeaning: 'Allah menurunkan sakinah kedamaian kepada orang tulus' }
+];
 
 export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
   island,
@@ -63,92 +156,117 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
   onLaunchGame,
   onReward
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'docks' | 'thesaurus'>('overview');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Makanan & Minuman');
-  const [selectedWord, setSelectedWord] = useState<VocabularyCard>(THEMATIC_VOCAB_COLLECTION['Makanan & Minuman'][0]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'thesaurus' | 'quiz' | 'docks'>('overview');
+  const [levelFilter, setLevelFilter] = useState<number | 'all'>('all');
+  const [selectedWord, setSelectedWord] = useState<VocabularyCard>(THEMATIC_VOCAB_COLLECTION[0]);
   const [claimedDialogueXP, setClaimedDialogueXP] = useState(false);
 
-  const categories = Object.keys(THEMATIC_VOCAB_COLLECTION);
-  const currentWords = THEMATIC_VOCAB_COLLECTION[selectedCategory] || [];
+  // Quiz state
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizScore, setQuizScore] = useState(0);
+  const [answeredQuestion, setAnsweredQuestion] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  // Filtered list of words based on level
+  const filteredWords = useMemo(() => {
+    if (levelFilter === 'all') return THEMATIC_VOCAB_COLLECTION;
+    return THEMATIC_VOCAB_COLLECTION.filter(w => w.level === levelFilter);
+  }, [levelFilter]);
+
+  // Quiz questions derived from collection
+  const quizQuestions = useMemo(() => {
+    return THEMATIC_VOCAB_COLLECTION.slice(0, 10).map((card, idx) => {
+      // Pick 2 distractors
+      const otherWords = THEMATIC_VOCAB_COLLECTION.filter(w => w.id !== card.id);
+      const dist1 = otherWords[(idx * 3 + 1) % otherWords.length].meaning;
+      const dist2 = otherWords[(idx * 5 + 2) % otherWords.length].meaning;
+      const options = [
+        { text: card.meaning, isCorrect: true },
+        { text: dist1, isCorrect: false },
+        { text: dist2, isCorrect: false }
+      ].sort(() => 0.5 - Math.random());
+
+      return {
+        card,
+        options
+      };
+    });
+  }, []);
 
   const handleClaimGuideReward = () => {
     if (claimedDialogueXP) return;
     sound.playSuccess();
-    sound.speakArabic('مَرْحَبًا بِكُمْ فِي سُوقِ المُفْرَدَات!');
+    sound.speakArabic('مَرْحَبًا بِكُمْ فِي سُوقِ المُفْرَدَاتِ العَجِيبَة!');
     setClaimedDialogueXP(true);
-    GameStorage.addReward(50, 1, 'lughah', 5);
-    onReward(50, 1);
+    GameStorage.addReward(60, 1, 'lughah', 6);
+    onReward(60, 1);
+  };
+
+  const handleAnswerQuiz = (selectedText: string, isCorrect: boolean) => {
+    if (answeredQuestion) return;
+    setSelectedAnswer(selectedText);
+    setAnsweredQuestion(true);
+
+    if (isCorrect) {
+      sound.playSuccess();
+      sound.speakArabic(quizQuestions[quizIndex].card.name_ar);
+      setQuizScore(prev => prev + 1);
+      GameStorage.addReward(20, 0, 'lughah', 2);
+      onReward(20, 0);
+    } else {
+      sound.playGentleRetry();
+    }
+  };
+
+  const handleNextQuiz = () => {
+    setAnsweredQuestion(false);
+    setSelectedAnswer(null);
+    if (quizIndex + 1 < quizQuestions.length) {
+      setQuizIndex(prev => prev + 1);
+    } else {
+      setQuizIndex(0); // loop
+    }
+  };
+
+  const hasCrystal = Boolean(profile.crystals[island.id]);
+
+  const tabs = [
+    { id: 'overview', label: '🧭 Eksplorasi Pasar & Panduan' },
+    { id: 'thesaurus', label: '📖 Kosakata Tematik (L0–L5)', badge: `${filteredWords.length}` },
+    { id: 'quiz', label: '✨ Kuis Semantik Perahu' },
+    { id: 'docks', label: '🎮 Wahana Mini-Games', badge: '3' },
+  ];
+
+  const guide = {
+    name: 'Bibi Maryam al-Bahr',
+    role: 'Nahkoda & Pemandu Mufradat',
+    avatar: '🛶',
+    greetingAr: 'أَهْلاً وَسَهْلاً فِي سُوقِ الكَلِمَاتِ!',
+    speechText: 'Selamat datang di Pasar Apung Mufradat! Kuasai kosakata tematik dari Level 0 hingga Level 5 untuk membuka berkah perdagangan bahasa.',
+    onClaimXP: handleClaimGuideReward,
+    claimedXP: claimedDialogueXP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.92, opacity: 0 }}
-        className="w-full max-w-4xl bg-gradient-to-b from-amber-50 via-white to-orange-50 rounded-3xl shadow-2xl border-4 border-amber-300 overflow-hidden flex flex-col max-h-[92vh]"
-      >
-        {/* Modal Top Header */}
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-5 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-3xl shadow-inner">
-              🛶
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-extrabold uppercase bg-black/20 px-2.5 py-0.5 rounded-full text-amber-100">
-                  Pulau ke-2 • Bioma Pasar Terapung Perahu
-                </span>
-                <span className="text-xs bg-amber-200 text-amber-950 font-extrabold px-2 py-0.5 rounded-full">
-                  Kristal: Emas-Jingga 💎
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold font-chibi flex items-center gap-2 mt-0.5">
-                {island.name_ar} — {island.name_id}
-              </h2>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-transform active:scale-95"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="bg-amber-100/90 border-b border-amber-200 px-6 py-2.5 flex items-center gap-3">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 ${
-              activeTab === 'overview'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-900 hover:bg-white/80'
-            }`}
-          >
-            <Compass className="w-4 h-4" /> Eksplorasi Pasar & Tokoh
-          </button>
-          <button
-            onClick={() => setActiveTab('thesaurus')}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 ${
-              activeTab === 'thesaurus'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-900 hover:bg-white/80'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" /> Etalase Mufradat Tematik (Kamus Audio)
-          </button>
-          <button
-            onClick={() => setActiveTab('docks')}
-            className={`px-4 py-2 rounded-2xl font-bold text-xs transition-all flex items-center gap-2 ${
-              activeTab === 'docks'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-900 hover:bg-white/80'
-            }`}
-          >
-            <Play className="w-4 h-4" /> Wahana Mini-Games MFR (3 Game)
-          </button>
-        </div>
+    <IslandModalLayout
+      island={{
+        id: island.id,
+        name_id: island.name_id,
+        name_ar: island.name_ar,
+        domain: island.domain,
+        biome: 'Bioma Pasar Terapung Perahu',
+        crystalName: island.crystalName,
+        minLevel: island.minLevel,
+        color: '#f59e0b'
+      }}
+      hasCrystal={hasCrystal}
+      isUnlocked={true}
+      guide={guide}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(tabId) => setActiveTab(tabId as any)}
+      onClose={onClose}
+    >
 
         {/* Tab 1: Overview & Pemandu Pulau */}
         {activeTab === 'overview' && (
@@ -169,11 +287,11 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                     Bibi Maryam (مَرْيَم البَحَّارَة)
                   </h3>
                   <span className="text-xs bg-amber-300 text-amber-950 font-bold px-2 py-0.5 rounded-full">
-                    Pemandu Pulau Mufradat
+                    Nakhoda Pasar Mufradat
                   </span>
                 </div>
                 <p className="text-xs text-amber-950 italic mb-2">
-                  "أَهْلًا وَسَهْلًا بِكُمْ فِي سُوقِ المُفْرَدَات! Selamat datang di pasar apung kami! Di sini setiap perahu memuat kata-kata berharga untuk bekal lisanmu. Dengarkan cara orang pasar memesan, pilih bendanya, dan kumpulkan Dinar pengetahuan!"
+                  "أَهْلًا وَسَهْلًا بِكُمْ فِي سُوقِ المُفْرَدَاتِ البَدِيعَة! Selamat datang di pasar apung kosakata kami! Di sini kurikulum telah diselaraskan menjadi 36 keterampilan tematik terstruktur rapi dari Tamhidi L0 hingga Mutaqaddim L5 (Rumah, Profesi, Alam, Teknologi, Diplomasi, dan Balaghah Sastra). Ambil perahumu dan raih kekayaan kosa kata emas!"
                 </p>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
                   <button
@@ -187,11 +305,11 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                       onClick={handleClaimGuideReward}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs"
                     >
-                      <Sparkles className="w-4 h-4" /> Terima Sambutan (+50 XP)
+                      <Sparkles className="w-4 h-4" /> Terima Sambutan (+60 XP)
                     </button>
                   ) : (
                     <span className="text-xs text-emerald-700 font-bold flex items-center gap-1 bg-emerald-100 px-3 py-1.5 rounded-xl">
-                      <CheckCircle2 className="w-4 h-4" /> Sambutan Diterima!
+                      <CheckCircle2 className="w-4 h-4" /> Sambutan Diterima (+60 XP)!
                     </span>
                   )}
                 </div>
@@ -202,23 +320,29 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white p-4 rounded-3xl border border-amber-200 shadow-xs">
                 <span className="text-xs text-slate-500 block mb-1">Cakupan Kurikulum</span>
-                <div className="text-xl font-extrabold text-amber-900">37 Skill Mufradat</div>
+                <div className="text-xl font-extrabold text-amber-900 flex items-center gap-2">
+                  36 Skill Tematik <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">L0–L5</span>
+                </div>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  Mencakup Angka 1-10, Warna, Keluarga, Sekolah, Makanan, Hewan, Kendaraan, hingga Jamak Taksir.
+                  6 jenjang bertingkat x 6 skill: Fondasi Rumah, Profesi, Alam Geografi, Sains Digital, Diplomasi, hingga Sastra Klasik.
                 </p>
               </div>
               <div className="bg-white p-4 rounded-3xl border border-amber-200 shadow-xs">
-                <span className="text-xs text-slate-500 block mb-1">Misi Utama Pulau</span>
-                <div className="text-xl font-extrabold text-orange-600">Pelayan Pasar Cerdas</div>
+                <span className="text-xs text-slate-500 block mb-1">Perbendaharaan Leksikon</span>
+                <div className="text-xl font-extrabold text-orange-600 flex items-center gap-2">
+                  187+ Kosakata <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-bold">100% Berharakat</span>
+                </div>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  Mendengar permintaan pelanggan Arab, mengambil barang dari perahu, mengeja kata di keranjang.
+                  Dilengkapi audio pelafalan fasih penutur asli, transliterasi presisi, dan contoh kalimat berfaedah (jumlah mufidah).
                 </p>
               </div>
               <div className="bg-white p-4 rounded-3xl border border-amber-200 shadow-xs">
-                <span className="text-xs text-slate-500 block mb-1">Kristal Pulau</span>
-                <div className="text-xl font-extrabold text-amber-500">Kristal Emas-Jingga 💎</div>
+                <span className="text-xs text-slate-500 block mb-1">Kedalaman Pedagogis</span>
+                <div className="text-xl font-extrabold text-amber-500 flex items-center gap-2">
+                  100% Standar Emas 💎
+                </div>
                 <p className="text-[11px] text-slate-600 mt-1">
-                  Diperoleh saat menguasai seluruh perahu tema kosakata dan lulus ujian pasar.
+                  Seluruh 36 skill memiliki modul kaidah, tips praktis Hudhud, dan kuis pemahaman konsep langsung.
                 </p>
               </div>
             </div>
@@ -287,33 +411,51 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
           </div>
         )}
 
-        {/* Tab 2: Thesaurus & Kamus Tematik Interaktif */}
+        {/* Tab 2: Thesaurus & Kamus Tematik Interaktif dengan Filter Jenjang L0-L5 */}
         {activeTab === 'thesaurus' && (
-          <div className="p-6 overflow-y-auto flex-1 flex flex-col md:flex-row gap-5">
-            {/* Left: Category Picker & Words List */}
-            <div className="w-full md:w-1/2 space-y-3">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setSelectedWord(THEMATIC_VOCAB_COLLECTION[cat][0]);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                      selectedCategory === cat
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'bg-white border border-amber-200 text-slate-700 hover:bg-amber-50'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+          <div className="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+            {/* Level Filter Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-amber-200">
+              <span className="text-xs font-bold text-slate-500 flex items-center gap-1 mr-1">
+                <Filter className="w-3.5 h-3.5" /> Jenjang:
+              </span>
+              <button
+                onClick={() => setLevelFilter('all')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                  levelFilter === 'all'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-white border border-amber-200 text-slate-700 hover:bg-amber-50'
+                }`}
+              >
+                Semua Jenjang ({THEMATIC_VOCAB_COLLECTION.length})
+              </button>
+              {[
+                { lvl: 0, label: 'L0: Tamhidi' },
+                { lvl: 1, label: 'L1: Mubtadi\' 1' },
+                { lvl: 2, label: 'L2: Mubtadi\' 2' },
+                { lvl: 3, label: 'L3: Mutawassith 1' },
+                { lvl: 4, label: 'L4: Mutawassith 2' },
+                { lvl: 5, label: 'L5: Mutaqaddim' }
+              ].map(item => (
+                <button
+                  key={item.lvl}
+                  onClick={() => setLevelFilter(item.lvl)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    levelFilter === item.lvl
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-white border border-amber-200 text-slate-700 hover:bg-amber-50'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
-              {/* Word List Buttons */}
-              <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-                {currentWords.map((card) => {
+            {/* Split View: Word List & Word Detail Spotlight */}
+            <div className="flex flex-col md:flex-row gap-5 flex-1 min-h-[380px]">
+              {/* Left Column: Word List */}
+              <div className="w-full md:w-1/2 space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                {filteredWords.map((card) => {
                   const isSelected = selectedWord.id === card.id;
                   return (
                     <button
@@ -324,88 +466,190 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                       }}
                       className={`w-full p-3 rounded-2xl text-left border flex items-center justify-between transition-all ${
                         isSelected
-                          ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-300'
+                          ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-300 shadow-sm'
                           : 'bg-white border-slate-200 hover:bg-amber-50/60'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{card.emoji}</span>
                         <div>
-                          <span className="font-arabic font-bold text-xl text-slate-900 block leading-tight">
-                            {card.name_ar}
-                          </span>
-                          <span className="text-xs font-semibold text-amber-800 block">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-arabic font-bold text-xl text-slate-900 leading-tight">
+                              {card.name_ar}
+                            </span>
+                            <span className="text-[10px] bg-amber-200/80 text-amber-950 font-bold px-1.5 py-0.2 rounded-md">
+                              {card.levelLabel}
+                            </span>
+                          </div>
+                          <span className="text-xs font-semibold text-amber-900 block mt-0.5">
                             {card.translit} • {card.meaning}
                           </span>
                         </div>
                       </div>
-                      <span className="text-xs text-amber-600 font-bold">
+                      <span className="text-xs text-amber-600 font-bold px-2 py-1 bg-amber-50 rounded-lg">
                         🔊
                       </span>
                     </button>
                   );
                 })}
               </div>
-            </div>
 
-            {/* Right: Word Detail Spotlight */}
-            <div className="w-full md:w-1/2 bg-white rounded-3xl p-6 border-2 border-amber-200 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full">
-                    Kategori: {selectedWord.category}
-                  </span>
-                  <button
-                    onClick={() => sound.speakArabic(selectedWord.name_ar)}
-                    className="p-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-xs"
-                    title="Lafalkan kata"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
+              {/* Right Column: Word Detail Spotlight */}
+              <div className="w-full md:w-1/2 bg-white rounded-3xl p-6 border-2 border-amber-200 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full">
+                        Kategori: {selectedWord.category}
+                      </span>
+                      <span className="text-xs bg-orange-100 text-orange-900 font-bold px-2.5 py-1 rounded-full">
+                        {selectedWord.levelLabel}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => sound.speakArabic(selectedWord.name_ar)}
+                      className="p-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white shadow-xs transition-transform active:scale-95"
+                      title="Lafalkan kata"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="text-center py-4">
+                    <div className="text-6xl mb-2">{selectedWord.emoji}</div>
+                    <h3 className="font-arabic font-extrabold text-5xl text-amber-950 mb-1 leading-normal">
+                      {selectedWord.name_ar}
+                    </h3>
+                    <p className="text-sm font-bold text-amber-800">
+                      {selectedWord.translit}
+                    </p>
+                    <p className="text-base font-semibold text-slate-700 mt-1">
+                      "{selectedWord.meaning}"
+                    </p>
+                  </div>
+
+                  {/* Example sentence box */}
+                  <div className="bg-amber-50/90 rounded-2xl p-4 border border-amber-200 mt-2 text-center">
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-amber-800 block mb-1">
+                      Contoh Kalimat Sempurna (جُمْلَة مُفِيدَة):
+                    </span>
+                    <p className="font-arabic font-bold text-xl text-slate-900 mb-1">
+                      "{selectedWord.exampleSentence}"
+                    </p>
+                    <p className="text-xs text-slate-600 italic">
+                      "{selectedWord.exampleMeaning}"
+                    </p>
+                    <button
+                      onClick={() => sound.speakArabic(selectedWord.exampleSentence)}
+                      className="mt-2 text-xs text-amber-700 hover:text-amber-900 font-bold flex items-center justify-center gap-1 mx-auto"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" /> Dengarkan Contoh Kalimat
+                    </button>
+                  </div>
                 </div>
 
-                <div className="text-center py-4">
-                  <div className="text-6xl mb-2">{selectedWord.emoji}</div>
-                  <h3 className="font-arabic font-extrabold text-5xl text-amber-950 mb-1 leading-normal">
-                    {selectedWord.name_ar}
-                  </h3>
-                  <p className="text-sm font-bold text-amber-800">
-                    {selectedWord.translit}
-                  </p>
-                  <p className="text-base font-semibold text-slate-700 mt-1">
-                    "{selectedWord.meaning}"
-                  </p>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Standar Kurikulum 36 Kategori Tematik</span>
+                  <span className="text-emerald-700 font-bold">100% Berharakat Penuh</span>
                 </div>
-
-                {/* Example sentence box */}
-                <div className="bg-amber-50/90 rounded-2xl p-4 border border-amber-200 mt-4 text-center">
-                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-amber-800 block mb-1">
-                    Contoh Kalimat Sempurna (جُمْلَة مُفِيدَة):
-                  </span>
-                  <p className="font-arabic font-bold text-xl text-slate-900 mb-1">
-                    "{selectedWord.exampleSentence}"
-                  </p>
-                  <p className="text-xs text-slate-600 italic">
-                    "{selectedWord.exampleMeaning}"
-                  </p>
-                  <button
-                    onClick={() => sound.speakArabic(selectedWord.exampleSentence)}
-                    className="mt-2 text-xs text-amber-700 hover:text-amber-900 font-bold flex items-center justify-center gap-1 mx-auto"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" /> Dengarkan Contoh Kalimat
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Kosakata Terstandarisasi Brightoria Lisan</span>
-                <span className="text-emerald-700 font-bold">100% Berharakat Penuh</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab 3: Docks Games Catalog */}
+        {/* Tab 3: Tantangan Kuis Semantik Perahu Dagang */}
+        {activeTab === 'quiz' && (
+          <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-3xl p-5 shadow-sm flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-100 block">
+                  Uji Pemahaman Mufradat Perahu
+                </span>
+                <h3 className="text-lg font-bold">Tantangan Semantik Koin Emas</h3>
+                <p className="text-xs text-amber-100 mt-0.5">
+                  Dengarkan audio kata Arab, pilih arti yang tepat, kumpulkan koin XP!
+                </p>
+              </div>
+              <div className="text-right bg-white/20 px-4 py-2 rounded-2xl backdrop-blur-xs">
+                <span className="text-[11px] block font-bold text-amber-100">Skor Benar:</span>
+                <span className="text-2xl font-extrabold">{quizScore} / {quizQuestions.length}</span>
+              </div>
+            </div>
+
+            {/* Quiz Question Card */}
+            {quizQuestions[quizIndex] && (
+              <div className="bg-white rounded-3xl p-6 border-2 border-amber-300 shadow-md space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full">
+                    Pertanyaan {quizIndex + 1} dari {quizQuestions.length}
+                  </span>
+                  <button
+                    onClick={() => sound.speakArabic(quizQuestions[quizIndex].card.name_ar)}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-xs"
+                  >
+                    <Volume2 className="w-4 h-4" /> Putar Audio Kata
+                  </button>
+                </div>
+
+                <div className="text-center py-2">
+                  <span className="text-5xl block mb-2">{quizQuestions[quizIndex].card.emoji}</span>
+                  <h4 className="font-arabic font-bold text-4xl text-amber-950">
+                    {quizQuestions[quizIndex].card.name_ar}
+                  </h4>
+                  <span className="text-xs font-bold text-amber-800 mt-1 block">
+                    ({quizQuestions[quizIndex].card.translit})
+                  </span>
+                  <p className="text-sm font-semibold text-slate-600 mt-2">
+                    Apakah arti yang paling tepat dari kosa kata di atas?
+                  </p>
+                </div>
+
+                {/* Options List */}
+                <div className="space-y-2.5 max-w-lg mx-auto">
+                  {quizQuestions[quizIndex].options.map((opt, i) => {
+                    const isSelected = selectedAnswer === opt.text;
+                    let btnStyle = 'bg-slate-50 border-slate-200 hover:bg-amber-50 text-slate-800';
+                    if (answeredQuestion) {
+                      if (opt.isCorrect) {
+                        btnStyle = 'bg-emerald-100 border-emerald-500 text-emerald-900 font-bold';
+                      } else if (isSelected && !opt.isCorrect) {
+                        btnStyle = 'bg-rose-100 border-rose-500 text-rose-900 line-through';
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={i}
+                        disabled={answeredQuestion}
+                        onClick={() => handleAnswerQuiz(opt.text, opt.isCorrect)}
+                        className={`w-full p-3.5 rounded-2xl border-2 text-left text-sm font-medium transition-all flex items-center justify-between ${btnStyle}`}
+                      >
+                        <span>{opt.text}</span>
+                        {answeredQuestion && opt.isCorrect && (
+                          <Check className="w-5 h-5 text-emerald-600" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Next Button after answering */}
+                {answeredQuestion && (
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleNextQuiz}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl text-xs shadow-md hover:from-amber-600 hover:to-orange-600 flex items-center gap-2"
+                    >
+                      Lanjut ke Soal Berikutnya <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 4: Docks Games Catalog */}
         {activeTab === 'docks' && (
           <div className="p-6 overflow-y-auto flex-1 space-y-4">
             <div className="text-center max-w-lg mx-auto mb-2">
@@ -426,7 +670,7 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                     Floating Market Quest
                   </h4>
                   <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full inline-block mb-2">
-                    Evidence: Reading & Responding
+                    Reading & Audio Recognition
                   </span>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Nakhoda, kucing pelaut, dan musafir datang memesan dengan kalimat Arab. Temukan barang di perahu dan dapatkan koin dinar.
@@ -450,7 +694,7 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                     Basket Spell (Keranjang)
                   </h4>
                   <span className="text-[10px] bg-orange-100 text-orange-900 font-bold px-2 py-0.5 rounded-full inline-block mb-2">
-                    Evidence: Writing & Spelling
+                    Writing & Spelling
                   </span>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Ambil huruf dari keranjang dan susun dari kanan ke kiri sesuai sambungan huruf Arab yang tepat.
@@ -474,7 +718,7 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
                     Sky Runner Arabi
                   </h4>
                   <span className="text-[10px] bg-sky-100 text-sky-900 font-bold px-2 py-0.5 rounded-full inline-block mb-2">
-                    Evidence: Speed Quiz & Vocab
+                    Speed Quiz & Vocab Reflex
                   </span>
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Pacu perahu langit di 3 jalur gerbang kata. Hindari kata yang salah sebelum menabrak portal mufradat.
@@ -491,21 +735,6 @@ export const PulauMufradatHubModal: React.FC<PulauMufradatHubModalProps> = ({
           </div>
         )}
 
-        {/* Modal Footer */}
-        <div className="bg-amber-50 px-6 py-3 border-t border-amber-200 flex items-center justify-between text-xs text-amber-900">
-          <div className="flex items-center gap-2">
-            <span>🏝️ Pulau Mufradat (MFR)</span>
-            <span>•</span>
-            <span className="font-bold">{profile.name} (Level {profile.level})</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors"
-          >
-            Tutup Hub
-          </button>
-        </div>
-      </motion.div>
-    </div>
+    </IslandModalLayout>
   );
 };

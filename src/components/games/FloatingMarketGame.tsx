@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Volume2, CheckCircle2, Award, ShoppingBag, ArrowRight, RefreshCw, Star, Layers, Sparkles } from 'lucide-react';
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface FloatingMarketProps {
   onClose: () => void;
@@ -92,13 +93,15 @@ const MARKET_STAGES: MarketStage[] = [
 ];
 
 export const FloatingMarketGame: React.FC<FloatingMarketProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [selectedStageIdx, setSelectedStageIdx] = useState(0);
   const [custIdx, setCustIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [shakeWrong, setShakeWrong] = useState<string | null>(null);
   const [successItem, setSuccessItem] = useState<MarketItem | null>(null);
-  const [isFinished, setIsFinished] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Pilih barang pesanan pembeli di rak!');
 
   const stage = MARKET_STAGES[selectedStageIdx];
   const customer = stage.customers[custIdx];
@@ -111,6 +114,9 @@ export const FloatingMarketGame: React.FC<FloatingMarketProps> = ({ onClose, onR
       setSuccessItem(item);
       setScore(prev => prev + 1);
       setCoinsEarned(prev => prev + item.priceDinar);
+      setMascotMood('celebrate');
+      setMascotComment(`Mumtaz! ${item.name_id} berhasil diserahkan ke pembeli!`);
+
       GameStorage.markWordLearned(item.id);
       GameStorage.addReward(40, 2, 'lughah', 6);
       onReward(40, 2);
@@ -119,14 +125,18 @@ export const FloatingMarketGame: React.FC<FloatingMarketProps> = ({ onClose, onR
         setSuccessItem(null);
         if (custIdx < stage.customers.length - 1) {
           setCustIdx(prev => prev + 1);
+          setMascotMood('happy');
+          setMascotComment('Pembeli baru tiba di dermaga!');
         } else {
-          setIsFinished(true);
+          setFlowState('VICTORY');
         }
-      }, 1400);
+      }, 1200);
     } else {
       sound.playGentleRetry();
       sound.speakArabic(targetItem.name_ar);
       setShakeWrong(item.id);
+      setMascotMood('thinking');
+      setMascotComment(`Belum tepat! Pembeli mencari ${targetItem.name_id} (${targetItem.name_ar}).`);
       GameStorage.markWordDifficult(targetItem.id);
       setTimeout(() => setShakeWrong(null), 600);
     }
@@ -137,262 +147,143 @@ export const FloatingMarketGame: React.FC<FloatingMarketProps> = ({ onClose, onR
   };
 
   const handleSwitchStage = (idx: number) => {
+    sound.playPop();
     setSelectedStageIdx(idx);
     setCustIdx(0);
-    setIsFinished(false);
     setSuccessItem(null);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-xl bg-gradient-to-b from-sky-50 via-amber-50 to-orange-50 rounded-3xl shadow-2xl border-4 border-amber-300 overflow-hidden flex flex-col max-h-[94vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 flex items-center justify-between shadow-md">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20">Pasar Apung Mufradat (MFR)</span>
-              <span className="text-xs bg-amber-300 text-amber-950 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
-                ⭐ {score} Pembeli
-              </span>
-              <span className="text-xs bg-yellow-300 text-yellow-950 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
-                🪙 {coinsEarned} Dinar
-              </span>
-            </div>
-            <h2 className="text-xl font-bold font-chibi flex items-center gap-2 mt-1">
-              ⛵ Floating Market Quest — سُوقُ المُفْرَدَات
-            </h2>
-          </div>
+    <GameShell
+      title="Pasar Apung Mufradat"
+      titleAr="سُوقُ المُفْرَدَاتِ العَائِمَةِ"
+      islandName="Pulau Mufradat"
+      islandColor="from-amber-600 via-orange-500 to-yellow-600"
+      gameIcon="⛵"
+      targetObjective="Layani pembeli perahu dermaga dengan mencocokkan kosakata bahasa Arab yang diminta"
+      howToPlay={[
+        { icon: '👳‍♂️', text: 'Perhatikan kalimat pesanan pembeli yang mendarat di dermaga pasar.' },
+        { icon: '🍎', text: 'Pilih barang dagangan yang sesuai dengan nama dan tulisan bahasa Arabnya.' },
+        { icon: '🪙', text: 'Kumpulkan koin Dinar dan bintang pemuas pembeli untuk naik tingkat!' }
+      ]}
+      speechArabic="أَهْلاً بِكُمْ فِي سُوقِ الكَلِمَاتِ!"
+      speechIntro="Mari melayani para musafir di dermaga pasar apung Pulau Mufradat!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setCustIdx(0);
+        setScore(0);
+        setCoinsEarned(0);
+        playCustomerAudio();
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setCustIdx(0);
+        setScore(0);
+        setCoinsEarned(0);
+        setSuccessItem(null);
+      }}
+      onClose={onClose}
+      currentRound={custIdx + 1}
+      totalRounds={stage.customers.length}
+      score={score}
+      maxScore={stage.customers.length}
+      starsEarned={score >= stage.customers.length ? 3 : score >= 2 ? 2 : 1}
+      xpEarned={score * 40}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic={targetItem.name_ar}
+      victorySummary={[
+        { label: 'Pembeli Terlayani', value: `${score} Orang` },
+        { label: 'Dinar Terkumpul', value: `🪙 ${coinsEarned} Dinar` },
+        { label: 'Tema Dermaga', value: stage.theme },
+        { label: 'Kepuasan Pasar', value: '⭐⭐⭐ Sempurna' }
+      ]}
+    >
+      {/* Stage Selector Pills */}
+      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-amber-200/80 overflow-x-auto text-xs">
+        <span className="font-bold text-amber-900 shrink-0 text-[11px] flex items-center gap-1">
+          <Layers className="w-3.5 h-3.5" /> Dermaga:
+        </span>
+        {MARKET_STAGES.map((stg, i) => (
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
+            key={stg.id}
+            onClick={() => handleSwitchStage(i)}
+            className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              selectedStageIdx === i
+                ? 'bg-amber-600 text-white font-black shadow-xs ring-1 ring-amber-400'
+                : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'
+            }`}
           >
-            ✕
+            {stg.title}
           </button>
-        </div>
+        ))}
+      </div>
 
-        {/* Stage Selector Pills */}
-        <div className="bg-amber-100/80 px-4 py-2 flex items-center gap-2 overflow-x-auto border-b border-amber-200">
-          <span className="text-xs font-bold text-amber-900 flex items-center gap-1 whitespace-nowrap">
-            <Layers className="w-3.5 h-3.5" /> Dermaga:
-          </span>
-          {MARKET_STAGES.map((stg, i) => (
+      {/* Customer Quest Banner */}
+      <div className="bg-gradient-to-r from-sky-50 to-amber-50 border-2 border-amber-300 rounded-2xl p-3 sm:p-4 mb-3 flex items-center gap-3 shadow-xs">
+        <div className="w-12 h-12 rounded-2xl bg-amber-200 flex items-center justify-center text-3xl shadow-inner border border-amber-300 shrink-0">
+          {customer.avatar}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] font-black text-amber-800 uppercase tracking-wider">
+              {customer.name} memesan:
+            </span>
             <button
-              key={stg.id}
-              onClick={() => handleSwitchStage(i)}
-              className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                selectedStageIdx === i
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'bg-white/80 text-amber-900 hover:bg-white'
+              type="button"
+              onClick={playCustomerAudio}
+              className="p-1 rounded-lg bg-white hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold flex items-center gap-1 shadow-2xs"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Dengar</span>
+            </button>
+          </div>
+          <p className="font-arabic text-teal-900 text-base sm:text-lg font-black leading-snug truncate mt-0.5">
+            "{customer.requestPhrase}"
+          </p>
+          <p className="text-xs text-slate-600 italic leading-snug">
+            "{customer.requestIndo}"
+          </p>
+        </div>
+      </div>
+
+      {/* Market Shelf Items Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 my-auto">
+        {stage.items.map(item => {
+          const isShaking = shakeWrong === item.id;
+          const isTarget = item.id === targetItem.id;
+          const isSuccess = successItem?.id === item.id;
+
+          return (
+            <motion.button
+              key={item.id}
+              type="button"
+              animate={isShaking ? { x: [-8, 8, -6, 6, 0] } : isSuccess ? { scale: [1, 1.06, 1] } : {}}
+              transition={{ duration: 0.3 }}
+              onClick={() => handleSelectItem(item)}
+              className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative ${
+                isSuccess
+                  ? 'bg-emerald-100 border-emerald-400 ring-2 ring-emerald-300 shadow-md'
+                  : 'bg-white hover:bg-amber-50/80 border-slate-200 hover:border-amber-400 shadow-xs hover:shadow-md'
               }`}
             >
-              {stg.title}
-            </button>
-          ))}
-        </div>
+              <span className="text-3xl sm:text-4xl">{item.emoji}</span>
+              <span className="font-arabic text-lg sm:text-xl font-black text-slate-800">
+                {item.name_ar}
+              </span>
+              <span className="text-[11px] font-bold text-slate-600 text-center leading-tight">
+                {item.name_id}
+              </span>
 
-        {/* Body Container */}
-        <div className="p-4 overflow-y-auto flex-1 flex flex-col justify-between">
-          {!isFinished ? (
-            <>
-              {/* Customer Floating Boat Order Card */}
-              <div className="bg-white rounded-3xl p-4 shadow-lg border-2 border-amber-200 relative overflow-hidden mb-4">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100/50 rounded-full blur-2xl -mr-10 -mt-10" />
-
-                <div className="flex items-start gap-4">
-                  {/* Customer Avatar & Boat Icon */}
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-400 flex items-center justify-center text-3xl shadow-md border-2 border-white">
-                      {customer.avatar}
-                    </div>
-                    <span className="absolute -bottom-2 -right-1 text-base" title="Perahu Terapung">
-                      🛶
-                    </span>
-                  </div>
-
-                  {/* Customer speech bubble */}
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-bold text-slate-800 text-sm">{customer.name}</h4>
-                      <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                        Pesanan {custIdx + 1} dari {stage.customers.length}
-                      </span>
-                    </div>
-
-                    {/* Arabic Request with Voice */}
-                    <div className="flex items-center gap-2 bg-amber-50/80 p-2.5 rounded-2xl border border-amber-200/80">
-                      <p className="font-arabic font-bold text-xl text-amber-950 flex-1 leading-relaxed">
-                        "{customer.requestPhrase}"
-                      </p>
-                      <button
-                        onClick={playCustomerAudio}
-                        className="w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-xs transition-transform active:scale-95 shrink-0"
-                        title="Dengarkan Suara Pembeli"
-                      >
-                        <Volume2 className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-slate-600 italic mt-1.5 flex items-center gap-1">
-                      <span>💡 Terjemahan:</span> "{customer.requestIndo}"
-                    </p>
-                  </div>
-                </div>
-
-                {/* Target item clue badge */}
-                <div className="mt-3 pt-3 border-t border-amber-100 flex items-center justify-between text-xs text-amber-900 font-semibold">
-                  <span>Pilih barang dari perahu terapung di bawah:</span>
-                  <span className="bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full font-bold">
-                    Upah: +{targetItem.priceDinar} Dinar 🪙
-                  </span>
-                </div>
+              {/* Price Tag */}
+              <div className="mt-1 bg-amber-100 px-2 py-0.5 rounded-full text-[10px] font-black text-amber-900">
+                🪙 {item.priceDinar} Dinar
               </div>
-
-              {/* River Waves Waterline Indicator */}
-              <div className="flex items-center justify-center gap-2 text-xs font-bold text-sky-700 my-1">
-                <span>〰️</span>
-                <span>Aliran Sungai Pasar Apung (سُوقُ المُفْرَدَات)</span>
-                <span>〰️</span>
-              </div>
-
-              {/* Boat Goods Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
-                {stage.items.map((item) => {
-                  const isShaking = shakeWrong === item.id;
-                  const isSuccess = successItem?.id === item.id;
-
-                  return (
-                    <motion.button
-                      key={item.id}
-                      animate={isShaking ? { x: [-8, 8, -6, 6, 0] } : {}}
-                      whileHover={{ scale: 1.03, y: -2 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleSelectItem(item)}
-                      className={`relative p-3 rounded-2xl bg-white border-2 text-left shadow-md flex flex-col justify-between transition-all ${
-                        isSuccess
-                          ? 'border-emerald-500 ring-4 ring-emerald-300 bg-emerald-50'
-                          : isShaking
-                          ? 'border-rose-400 bg-rose-50'
-                          : 'border-amber-200 hover:border-amber-400 hover:shadow-lg'
-                      }`}
-                    >
-                      {/* Top icon and price */}
-                      <div className="flex items-center justify-between mb-1">
-                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-2xl shadow-xs`}>
-                          {item.emoji}
-                        </div>
-                        <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
-                          {item.priceDinar} Dinar
-                        </span>
-                      </div>
-
-                      {/* Item Arabic Word */}
-                      <div className="mt-1">
-                        <div className="font-arabic font-bold text-2xl text-slate-900 leading-tight">
-                          {item.name_ar}
-                        </div>
-                        <div className="text-[11px] font-bold text-amber-800">
-                          {item.translit}
-                        </div>
-                        <div className="text-[11px] text-slate-600 line-clamp-1">
-                          {item.name_id}
-                        </div>
-                      </div>
-
-                      {/* Sound speak small button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          sound.speakArabic(item.name_ar);
-                        }}
-                        className="mt-2 text-[10px] text-amber-700 font-bold flex items-center gap-1 hover:text-amber-900"
-                      >
-                        <Volume2 className="w-3 h-3" /> Lafalkan
-                      </button>
-
-                      {/* Success mark overlay */}
-                      {isSuccess && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute inset-0 bg-emerald-500/90 rounded-2xl flex flex-col items-center justify-center text-white"
-                        >
-                          <CheckCircle2 className="w-8 h-8 mb-1" />
-                          <span className="font-bold text-xs">MUMTAZ!</span>
-                        </motion.div>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            /* Stage Finished Victory Card */
-            <div className="bg-white rounded-3xl p-6 text-center shadow-xl border-4 border-amber-300 my-auto">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-20 h-20 rounded-full bg-amber-500 text-white flex items-center justify-center mx-auto mb-3 shadow-lg"
-              >
-                <Award className="w-10 h-10" />
-              </motion.div>
-
-              <h3 className="text-2xl font-bold font-chibi text-slate-800 mb-1">
-                Barakallahu Feek!
-              </h3>
-              <p className="text-sm text-slate-600 mb-4">
-                Kamu telah berhasil melayani seluruh pembeli di <strong>{stage.title}</strong>!
-              </p>
-
-              <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-5 flex items-center justify-around">
-                <div>
-                  <span className="text-xs text-slate-500 block">Total Skor</span>
-                  <span className="text-xl font-extrabold text-amber-900">⭐ {score}</span>
-                </div>
-                <div className="h-8 w-px bg-amber-200" />
-                <div>
-                  <span className="text-xs text-slate-500 block">Dinar Terkumpul</span>
-                  <span className="text-xl font-extrabold text-amber-900">🪙 {coinsEarned}</span>
-                </div>
-                <div className="h-8 w-px bg-amber-200" />
-                <div>
-                  <span className="text-xs text-slate-500 block">Bonus XP</span>
-                  <span className="text-xl font-extrabold text-emerald-600">+120 XP</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                {selectedStageIdx < MARKET_STAGES.length - 1 ? (
-                  <button
-                    onClick={() => handleSwitchStage(selectedStageIdx + 1)}
-                    className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2"
-                  >
-                    Lanjut ke Dermaga Berikutnya <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleSwitchStage(0)}
-                    className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold rounded-2xl shadow-lg hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Mainkan Lagi
-                  </button>
-                )}
-                <button
-                  onClick={onClose}
-                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl"
-                >
-                  Selesai
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </GameShell>
   );
 };

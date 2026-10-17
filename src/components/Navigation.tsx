@@ -19,7 +19,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, onTabChange 
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-amber-200/80 px-2 py-1.5 shadow-lg">
-      <div className="max-w-md mx-auto flex items-center justify-around">
+      <div className="max-w-3xl mx-auto flex items-center justify-around">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;

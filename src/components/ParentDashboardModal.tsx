@@ -8,9 +8,15 @@ interface ParentDashboardProps {
   profile: UserProfile;
   onClose: () => void;
   onPracticeDifficultWords: () => void;
+  onOpenGlossary?: () => void;
 }
 
-export const ParentDashboardModal: React.FC<ParentDashboardProps> = ({ profile, onClose, onPracticeDifficultWords }) => {
+export const ParentDashboardModal: React.FC<ParentDashboardProps> = ({
+  profile,
+  onClose,
+  onPracticeDifficultWords,
+  onOpenGlossary
+}) => {
   const [pinInput, setPinInput] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinError, setPinError] = useState(false);
@@ -181,16 +187,31 @@ export const ParentDashboardModal: React.FC<ParentDashboardProps> = ({ profile, 
                 </p>
               )}
 
-              <button
-                onClick={() => {
-                  onClose();
-                  onPracticeDifficultWords();
-                }}
-                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Mulai Sesi Latihan Cepat 3 Menit
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    onClose();
+                    onPracticeDifficultWords();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Latihan Cepat 3 Menit
+                </button>
+
+                {onOpenGlossary && (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onOpenGlossary();
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Buka Glosarium & Audio
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Progres Per Pulau */}

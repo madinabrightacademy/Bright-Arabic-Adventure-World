@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Star, Heart, Award, Feather, ArrowUpRight } from 'lucide-react';
+import { Sparkles, Star, Heart, Award, Feather, ArrowUpRight, UserCheck } from 'lucide-react';
 import { sound } from '../services/sound';
 import { GameStorage } from '../services/storage';
 import { UserProfile, HudhudStage } from '../types/game';
+import { MascotCharacter, MascotType } from './MascotCharacter';
 
 interface CompanionRoomProps {
   profile: UserProfile;
@@ -29,13 +30,20 @@ const ROOM_DECORATIONS = [
 ];
 
 export const CompanionRoomModal: React.FC<CompanionRoomProps> = ({ profile, onClose, onUpdateProfile }) => {
-  const [petHappy, setPetHappy] = useState(false);
+  const [activeMascotView, setActiveMascotView] = useState<MascotType>(
+    profile.avatar === 'aira' ? 'amira' : 'zaki'
+  );
   const stage = STAGES_INFO[profile.hudhudStage];
 
-  const handlePetHudhud = () => {
+  const handleSelectCharacter = (char: 'ari' | 'aira') => {
     sound.playSparkle();
-    setPetHappy(true);
-    setTimeout(() => setPetHappy(false), 1200);
+    const updated = {
+      ...profile,
+      avatar: char
+    };
+    GameStorage.saveProfile(updated);
+    onUpdateProfile(updated);
+    setActiveMascotView(char === 'aira' ? 'amira' : 'zaki');
   };
 
   const handleBuyDecoration = (dec: typeof ROOM_DECORATIONS[0]) => {
@@ -66,13 +74,16 @@ export const CompanionRoomModal: React.FC<CompanionRoomProps> = ({ profile, onCl
           <div className="flex items-center gap-2">
             <Feather className="w-6 h-6 text-yellow-300" />
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-200 block">Sahabat Setia Petualang</span>
-              <h2 className="text-xl font-bold font-chibi">Kamar Companion: Hudhud</h2>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-200 block">
+                Sahabat Setia Petualang
+              </span>
+              <h2 className="text-xl font-bold font-chibi">Kamar Maskot & Sahabat Hudhud</h2>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
+            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors cursor-pointer"
           >
             ✕
           </button>
@@ -80,59 +91,92 @@ export const CompanionRoomModal: React.FC<CompanionRoomProps> = ({ profile, onCl
 
         {/* Room Area */}
         <div className="p-4 flex-1 overflow-y-auto space-y-4">
-          {/* 3D/2.5D Living Room Stage */}
-          <div className="relative bg-gradient-to-b from-teal-700 via-teal-800 to-amber-950 rounded-3xl p-6 text-center text-white border-2 border-amber-400 shadow-xl overflow-hidden min-h-[220px] flex flex-col items-center justify-between">
-            {/* Ambient stars */}
-            <div className="absolute top-3 left-4 flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
-              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-              <span>{profile.stars} Bintang Tersedia</span>
+          {/* Character Switcher (Zaki or Amira) */}
+          <div className="bg-white rounded-2xl p-3 border-2 border-amber-200 shadow-xs flex items-center justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-black uppercase text-amber-800 block">
+                Pilih Karakter Petualangmu
+              </span>
+              <span className="text-xs font-bold text-slate-800">
+                Pilih Zaki atau Amira sebagai penjelajah utama
+              </span>
             </div>
 
-            {/* Room Decorations applied */}
-            <div className="absolute top-3 right-4 flex items-center gap-1 text-xl">
-              {profile.companionRoomDecorations.map(decId => {
-                const dec = ROOM_DECORATIONS.find(d => d.id === decId);
-                return dec ? <span key={decId} title={dec.name}>{dec.emoji}</span> : null;
-              })}
-            </div>
-
-            {/* Hudhud Character Animation */}
-            <div className="my-auto relative cursor-pointer" onClick={handlePetHudhud}>
-              <motion.div
-                animate={petHappy ? { scale: [1, 1.25, 1], rotate: [0, -8, 8, 0] } : { y: [0, -6, 0] }}
-                transition={petHappy ? { duration: 0.6 } : { repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-                className="text-7xl select-none filter drop-shadow-[0_10px_10px_rgba(0,0,0,0.4)]"
-              >
-                {stage.icon}
-              </motion.div>
-
-              {petHappy && (
-                <div className="absolute -top-3 -right-3 text-2xl animate-ping">
-                  ❤️
-                </div>
-              )}
-            </div>
-
-            {/* Info and pet button */}
-            <div className="w-full flex items-center justify-between bg-black/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/20">
-              <div className="text-left">
-                <h4 className="font-bold text-sm text-yellow-300 font-arabic">{stage.name_ar}</h4>
-                <p className="text-[11px] text-white/80">{stage.desc}</p>
-              </div>
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={handlePetHudhud}
-                className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1 active:scale-95 shadow-md transition-all shrink-0 ml-2"
+                type="button"
+                onClick={() => handleSelectCharacter('ari')}
+                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center gap-1 cursor-pointer ${
+                  profile.avatar !== 'aira'
+                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
               >
-                <Heart className="w-3.5 h-3.5 fill-red-600 text-red-600" /> Elus
+                <span>👦</span>
+                <span>Zaki</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelectCharacter('aira')}
+                className={`px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center gap-1 cursor-pointer ${
+                  profile.avatar === 'aira'
+                    ? 'bg-pink-400 text-slate-950 shadow-md ring-2 ring-pink-300'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>👧</span>
+                <span>Amira</span>
               </button>
             </div>
           </div>
 
-          {/* 5 Companion Traits (Bab 8.2 PDF) */}
+          {/* 3D Living Room Stage with Interactive Mascot */}
+          <div className="relative bg-gradient-to-b from-teal-700 via-teal-800 to-amber-950 rounded-3xl p-5 text-center text-white border-2 border-amber-400 shadow-xl overflow-hidden min-h-[240px] flex flex-col items-center justify-between">
+            {/* Ambient stars */}
+            <div className="w-full flex items-center justify-between text-xs font-bold z-10">
+              <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full">
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span>{profile.stars} Bintang Tersedia</span>
+              </div>
+
+              {/* Room Decorations */}
+              <div className="flex items-center gap-1 text-xl">
+                {profile.companionRoomDecorations.map(decId => {
+                  const dec = ROOM_DECORATIONS.find(d => d.id === decId);
+                  return dec ? <span key={decId} title={dec.name}>{dec.emoji}</span> : null;
+                })}
+              </div>
+            </div>
+
+            {/* Living Interactive Mascot Character */}
+            <div className="my-2 z-10">
+              <MascotCharacter
+                type={activeMascotView}
+                mood="cheer"
+                size="lg"
+                speechArabic="أَنَا صَدِيقُكَ المُخْلِص!"
+                speechBubble={`Ketuk aku untuk bermain! Aku menemanimu di setiap langkah belajar bahasa Arab!`}
+                showHudhudTogether={true}
+              />
+            </div>
+
+            {/* Hudhud Stage Info */}
+            <div className="w-full flex items-center justify-between bg-black/40 backdrop-blur-xs p-2.5 rounded-2xl border border-white/20 z-10">
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-lg">{stage.icon}</span>
+                  <h4 className="font-bold text-sm text-yellow-300 font-arabic">{stage.name_ar}</h4>
+                </div>
+                <p className="text-[11px] text-white/80 mt-0.5">{stage.desc}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5 Companion Traits */}
           <div className="bg-white rounded-2xl p-4 border border-amber-200 shadow-xs">
             <h4 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-amber-500" />
-              5 Trait Perkembangan Hudhud
+              5 Trait Perkembangan Kemahiran Lisan & Tulisan
             </h4>
 
             <div className="space-y-2.5">
@@ -174,13 +218,14 @@ export const CompanionRoomModal: React.FC<CompanionRoomProps> = ({ profile, onCl
                 return (
                   <button
                     key={dec.id}
+                    type="button"
                     onClick={() => handleBuyDecoration(dec)}
                     disabled={isOwned || !canAfford}
                     className={`p-2.5 rounded-2xl border flex items-center justify-between text-left transition-all ${
                       isOwned
                         ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
                         : canAfford
-                        ? 'bg-amber-50/50 border-amber-300 hover:bg-amber-100 text-slate-800'
+                        ? 'bg-amber-50/50 border-amber-300 hover:bg-amber-100 text-slate-800 cursor-pointer'
                         : 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                     }`}
                   >

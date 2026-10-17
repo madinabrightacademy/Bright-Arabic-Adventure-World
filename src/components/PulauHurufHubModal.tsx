@@ -5,15 +5,17 @@ import { UserProfile, Island } from '../types/game';
 import { ISLANDS_DATA, SKILLS_DATA, LEXICON_DATA } from '../data/curriculum';
 import { sound } from '../services/sound';
 import { GameStorage } from '../services/storage';
+import { IslandModalLayout } from './IslandModalLayout';
 
 interface PulauHurufHubProps {
   profile: UserProfile;
   onClose: () => void;
   onLaunchGame: (gameId: string) => void;
   onReward: (xp: number, stars: number) => void;
+  onOpenIqra?: () => void;
 }
 
-export const PulauHurufHubModal: React.FC<PulauHurufHubProps> = ({ profile, onClose, onLaunchGame, onReward }) => {
+export const PulauHurufHubModal: React.FC<PulauHurufHubProps> = ({ profile, onClose, onLaunchGame, onReward, onOpenIqra }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'lab' | 'alphabet_table'>('overview');
   const [labLetter, setLabLetter] = useState('ب');
   const [labHarakat, setLabHarakat] = useState<'fathah' | 'kasrah' | 'dhammah' | 'sukun' | 'syaddah' | 'tanwin_dham' | 'mad_alif' | 'mad_waw' | 'mad_yaa'>('fathah');
@@ -96,104 +98,44 @@ export const PulauHurufHubModal: React.FC<PulauHurufHubProps> = ({ profile, onCl
     setSyaikhSpeech('Membaca huruf hijaiyah dengan fasih adalah kunci memahami seluruh Al-Qur\'an dan bahasa Arab.');
   };
 
+  const tabs = [
+    { id: 'overview', label: '🎮 4 Mini-Game Pulau', badge: '4' },
+    { id: 'lab', label: '🔬 Lab Harakat & Mad' },
+    { id: 'alphabet_table', label: '📖 Ensiklopedia 28 Huruf', badge: '28' }
+  ];
+
+  const guide = {
+    name: 'Syaikh Kamil',
+    role: "Pemandu Qira'at",
+    avatar: '👳‍♂️',
+    greetingAr: 'جَزِيرَةُ الحُرُوفِ تُرَحِّبُ بِكُمْ',
+    speechText: syaikhSpeech,
+    onClaimXP: () => {
+      onReward(60, 1);
+      sound.playSparkle();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <motion.div
-        initial={{ scale: 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.94, opacity: 0 }}
-        className="w-full max-w-xl bg-teal-50 rounded-[36px] shadow-2xl border-4 border-teal-400 overflow-hidden flex flex-col my-auto max-h-[96vh]"
-      >
-        {/* Island Hero Banner with Biome */}
-        <div className="relative bg-gradient-to-r from-teal-800 via-cyan-800 to-teal-900 text-white p-5 border-b-4 border-teal-400">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-teal-400 text-teal-950 px-2.5 py-0.5 rounded-full">
-                  Pulau 1 • Jenjang J0 - J3
-                </span>
-                <span className="text-[10px] bg-white/20 text-teal-200 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  💎 {islandData.crystalName}
-                </span>
-              </div>
-              <h2 className="text-xl font-black font-chibi mt-1 flex items-center gap-1.5">
-                <span>🏝️ {islandData.name_id}</span>
-              </h2>
-              <p className="font-arabic text-2xl font-bold text-amber-300 mt-0.5">{islandData.name_ar}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center transition-colors active:scale-95"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Syaikh Kamil Speech Card */}
-          <div className="mt-3 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 flex items-center gap-3">
-            <button
-              onClick={handleSyaikhGreeting}
-              className="w-12 h-12 rounded-2xl bg-amber-400 text-amber-950 font-black text-2xl flex items-center justify-center shrink-0 shadow-md active:scale-95 transition-all hover:bg-amber-300"
-              title="Dengarkan Syaikh Kamil"
-            >
-              👳‍♂️
-            </button>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-amber-200">Syaikh Kamil (Pemandu Qira'at Pulau)</h4>
-                <span className="text-[10px] text-teal-300 font-bold">Sahabat Hudhud</span>
-              </div>
-              <p className="text-[11px] text-white/90 leading-tight mt-0.5">{syaikhSpeech}</p>
-            </div>
-          </div>
-
-          {/* Mastery Progress Bar */}
-          <div className="mt-3 flex items-center justify-between text-xs bg-black/30 px-3 py-1.5 rounded-xl border border-white/10">
-            <span className="text-teal-200 text-[11px] font-bold">
-              Keahlian Pulau Dikuasai: {masteredSkills.length} / {hrfSkills.length}
-            </span>
-            <span className="font-black text-amber-300 text-xs">
-              {Math.round((masteredSkills.length / hrfSkills.length) * 100)}% Selesai
-            </span>
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="bg-teal-100/80 px-4 py-2 border-b border-teal-200 flex gap-2 text-xs font-bold">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              activeTab === 'overview'
-                ? 'bg-teal-700 text-white shadow-xs font-black'
-                : 'bg-white text-slate-700 hover:bg-teal-50'
-            }`}
-          >
-            🎮 4 Mini-Game Pulau
-          </button>
-          <button
-            onClick={() => setActiveTab('lab')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              activeTab === 'lab'
-                ? 'bg-teal-700 text-white shadow-xs font-black'
-                : 'bg-white text-slate-700 hover:bg-teal-50'
-            }`}
-          >
-            🔬 Lab Harakat & Mad
-          </button>
-          <button
-            onClick={() => setActiveTab('alphabet_table')}
-            className={`px-3 py-1.5 rounded-xl transition-all ${
-              activeTab === 'alphabet_table'
-                ? 'bg-teal-700 text-white shadow-xs font-black'
-                : 'bg-white text-slate-700 hover:bg-teal-50'
-            }`}
-          >
-            📖 Ensiklopedia 28 Huruf
-          </button>
-        </div>
-
-        {/* Tab Content Body */}
-        <div className="p-4 flex-1 overflow-y-auto">
+    <IslandModalLayout
+      island={{
+        id: islandData.id,
+        name_id: islandData.name_id,
+        name_ar: islandData.name_ar,
+        domain: islandData.domain,
+        biome: 'Bioma Pantai Gurun Pasir',
+        crystalName: islandData.crystalName,
+        minLevel: islandData.minLevel,
+        color: '#0d9488'
+      }}
+      hasCrystal={Boolean(hasCrystal)}
+      isUnlocked={true}
+      guide={guide}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={(tabId) => setActiveTab(tabId as any)}
+      onClose={onClose}
+    >
           {/* TAB 1: OVERVIEW & 4 MINI GAMES */}
           {activeTab === 'overview' && (
             <div className="space-y-3">
@@ -207,6 +149,36 @@ export const PulauHurufHubModal: React.FC<PulauHurufHubProps> = ({ profile, onCl
               <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide pt-1">
                 Mini-Game Terdaftar di Pulau Huruf:
               </h4>
+
+              {/* Iqra Learning Platform Integration */}
+              {onOpenIqra && (
+                <div className="bg-gradient-to-r from-emerald-800 to-teal-900 p-3.5 rounded-2xl border-2 border-emerald-400 text-white shadow-xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-400 text-slate-950 font-black text-2xl flex items-center justify-center shrink-0 shadow-xs">
+                      📖
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h5 className="font-bold text-sm text-amber-300">
+                          Petualangan Iqra 1–6 & Tartil Hijaiyah
+                        </h5>
+                        <span className="text-[9px] bg-teal-400 text-teal-950 font-black px-1.5 py-0.2 rounded-full">
+                          Platform Utama
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-teal-100 mt-0.5">
+                        Modul lengkap Iqra Jilid 1 sampai 6, audio suku kata, ensiklopedia makharijul huruf, dan kuis.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { onClose(); onOpenIqra(); }}
+                    className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1 active:scale-95 cursor-pointer"
+                  >
+                    <span>Buka Iqra ▶</span>
+                  </button>
+                </div>
+              )}
 
               {/* Game 1: Sand Trace */}
               <div className="bg-white p-3.5 rounded-2xl border-2 border-amber-300 hover:border-amber-400 shadow-xs flex items-center justify-between gap-3 group transition-all">
@@ -534,19 +506,6 @@ export const PulauHurufHubModal: React.FC<PulauHurufHubProps> = ({ profile, onCl
               </div>
             </div>
           )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="bg-teal-100/70 p-3 px-4 border-t border-teal-200 flex items-center justify-between text-xs">
-          <span className="font-bold text-teal-900">Pulau Huruf • Jazirat al-Huruf</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl active:scale-95 transition-all shadow-xs"
-          >
-            Kembali ke Peta
-          </button>
-        </div>
-      </motion.div>
-    </div>
+    </IslandModalLayout>
   );
 };

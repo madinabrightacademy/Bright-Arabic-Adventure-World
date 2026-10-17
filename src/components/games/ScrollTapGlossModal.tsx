@@ -4,6 +4,7 @@ import { BookOpen, Volume2, Sparkles, Plus, CheckCircle2, Bookmark, ArrowRight }
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
 import { GRADED_READINGS } from '../../data/curriculum';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface ScrollTapGlossProps {
   onClose: () => void;
@@ -11,16 +12,21 @@ interface ScrollTapGlossProps {
 }
 
 export const ScrollTapGlossModal: React.FC<ScrollTapGlossProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [selectedStoryIdx, setSelectedStoryIdx] = useState(0);
   const [activeWordGloss, setActiveWordGloss] = useState<{ ar: string; mean: string } | null>(null);
   const [savedWords, setSavedWords] = useState<string[]>([]);
-  const [isFinishedReading, setIsFinishedReading] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Ketuk kata mana pun untuk mendengar arti & lafalnya!');
 
   const story = GRADED_READINGS[selectedStoryIdx];
 
   const handleTapWord = (word: { ar: string; mean: string }) => {
     sound.speakArabic(word.ar);
+    sound.playTap();
     setActiveWordGloss(word);
+    setMascotMood('cheer');
+    setMascotComment(`"${word.ar}": ${word.mean}`);
   };
 
   const handleSaveToCollection = (word: { ar: string; mean: string }) => {
@@ -34,173 +40,170 @@ export const ScrollTapGlossModal: React.FC<ScrollTapGlossProps> = ({ onClose, on
 
   const handleCompleteStory = () => {
     sound.playSuccess();
-    sound.playFanfare();
-    setIsFinishedReading(true);
-    GameStorage.addReward(70, 4, 'qiraah', 10);
-    onReward(70, 4);
+    setMascotMood('celebrate');
+    GameStorage.addReward(70, 3, 'qiraah', 10);
+    onReward(70, 3);
+    setFlowState('VICTORY');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg bg-rose-50 rounded-3xl shadow-2xl border-4 border-rose-300 overflow-hidden flex flex-col max-h-[92vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-rose-700 via-red-600 to-amber-700 text-white p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-amber-300" />
-            <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-200 block">
-                Perpustakaan Qira'ah (QRA)
-              </span>
-              <h2 className="text-xl font-bold font-chibi">Scroll Tap-Gloss (Baca Bertingkat)</h2>
-            </div>
-          </div>
+    <GameShell
+      title="Gulungan Bacaan Qira'ah"
+      titleAr="مَخْطُوطَةُ القِرَاءَةِ المُتَدَرِّجَةِ"
+      islandName="Pulau Qira'ah"
+      islandColor="from-rose-700 via-red-600 to-amber-700"
+      gameIcon="📜"
+      targetObjective="Baca naskah bertingkat, ketuk kata Arab mana pun untuk mendengar suara fasih dan terjemahan kata per kata"
+      howToPlay={[
+        { icon: '📜', text: 'Pilih gulungan naskah bacaan bertingkat (Qira\'ah Mutadarrijah).' },
+        { icon: '👆', text: 'Ketuk kata Arab untuk membuka kartu terjemahan instan dan mendengar audionya.' },
+        { icon: '🔖', text: 'Simpan kata sulit ke buku kosakata dan tekan tombol "Selesai Membaca"!' }
+      ]}
+      speechArabic="اِقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ!"
+      speechIntro="Mari membaca gulungan hikmah di Perpustakaan Naskh Pulau Qira'ah!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setActiveWordGloss(null);
+        sound.speakArabic(story.title);
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setActiveWordGloss(null);
+        setSavedWords([]);
+      }}
+      onClose={onClose}
+      currentRound={selectedStoryIdx + 1}
+      totalRounds={GRADED_READINGS.length}
+      score={savedWords.length + 1}
+      maxScore={GRADED_READINGS.length}
+      starsEarned={3}
+      xpEarned={70}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic="قِرَاءَةٌ"
+      onPlayTitleAudio={() => sound.speakArabic(story.title)}
+      victorySummary={[
+        { label: 'Naskah Tuntas', value: story.title },
+        { label: 'Kata Disimpan', value: `${savedWords.length} Kosakata` },
+        { label: 'Tingkat Literasi', value: 'Qira\'ah Mutadarrijah' },
+        { label: 'Kefasihan Membaca', value: '⭐⭐⭐ Lancar' }
+      ]}
+    >
+      {/* Story Selector Pills */}
+      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-rose-200/80 overflow-x-auto text-xs">
+        {GRADED_READINGS.map((st, idx) => (
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
+            key={st.id}
+            onClick={() => {
+              sound.playPop();
+              setSelectedStoryIdx(idx);
+              setActiveWordGloss(null);
+            }}
+            className={`px-3 py-1 rounded-xl font-bold whitespace-nowrap transition-all ${
+              selectedStoryIdx === idx
+                ? 'bg-rose-700 text-white font-black shadow-xs ring-1 ring-rose-400'
+                : 'bg-rose-50 text-rose-950 border border-rose-200'
+            }`}
           >
-            ✕
+            Naskah {idx + 1}: {st.title.split(' ')[0]}
+          </button>
+        ))}
+      </div>
+
+      {/* Story Parchment Scroll */}
+      <div className="bg-gradient-to-b from-amber-50 to-orange-50 border-2 border-amber-200 rounded-3xl p-4 sm:p-5 shadow-inner my-auto max-h-[220px] overflow-y-auto">
+        <div className="flex items-center justify-between mb-2 pb-1 border-b border-amber-200/80">
+          <h4 className="font-bold text-sm text-slate-800">{story.title}</h4>
+          <button
+            type="button"
+            onClick={() => sound.speakArabic(story.paragraphs.map(p => p.ar).join(' '))}
+            className="p-1 rounded-lg bg-white hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span>Dengar Semua</span>
           </button>
         </div>
 
-        {/* Story Selector */}
-        <div className="p-3 bg-white/80 border-b border-rose-200 flex items-center gap-2 overflow-x-auto text-xs font-bold">
-          {GRADED_READINGS.map((st, idx) => (
-            <button
-              key={st.id}
-              onClick={() => {
-                setSelectedStoryIdx(idx);
-                setActiveWordGloss(null);
-                setIsFinishedReading(false);
-              }}
-              className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-all ${
-                selectedStoryIdx === idx
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-rose-100 text-rose-900 hover:bg-rose-200'
-              }`}
-            >
-              Naskah {idx + 1}: {st.title.split(' ')[0]}
-            </button>
+        {/* Interactive Paragraph Words */}
+        <div className="space-y-3">
+          {story.paragraphs.map((p, pIdx) => (
+            <div key={pIdx} className="space-y-1">
+              <div className="flex flex-wrap gap-1.5 justify-end" dir="rtl">
+                {p.words.map((w, wIdx) => {
+                  const isGlossed = activeWordGloss?.ar === w.ar;
+                  return (
+                    <button
+                      key={wIdx}
+                      type="button"
+                      onClick={() => handleTapWord(w)}
+                      className={`font-arabic text-xl sm:text-2xl font-black px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                        isGlossed
+                          ? 'bg-rose-600 text-white shadow-xs'
+                          : 'text-slate-800 hover:bg-rose-100 hover:text-rose-900'
+                      }`}
+                    >
+                      {w.ar}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-slate-600 italic leading-snug">
+                "{p.translation}"
+              </p>
+            </div>
           ))}
         </div>
+      </div>
 
-        {/* Content Body */}
-        <div className="p-4 flex-1 overflow-y-auto space-y-4">
-          {/* Title and Audio Play of Story */}
-          <div className="bg-white rounded-2xl p-3.5 border border-rose-200 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-rose-700 uppercase">Judul Gulungan Naskah:</span>
-              <h3 className="text-base font-bold text-slate-800">{story.title}</h3>
-            </div>
+      {/* Word Gloss Inspection Bottom Bar */}
+      {activeWordGloss && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 p-2.5 rounded-2xl bg-white border-2 border-rose-300 shadow-xs flex items-center justify-between gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-arabic text-xl font-black text-rose-800">
+              {activeWordGloss.ar}
+            </span>
+            <span className="text-xs font-bold text-slate-700">
+              = {activeWordGloss.mean}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() => sound.speakArabic(story.paragraphs.map(p => p.ar).join(' '))}
-              className="w-9 h-9 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all"
-              title="Dengarkan seluruh cerita"
+              type="button"
+              onClick={() => sound.speakArabic(activeWordGloss.ar)}
+              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800"
+              title="Dengarkan Kata"
             >
-              <Volume2 className="w-4 h-4" />
+              <Volume2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveToCollection(activeWordGloss)}
+              className="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-2xs"
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Simpan</span>
             </button>
           </div>
+        </motion.div>
+      )}
 
-          <p className="text-xs text-rose-900 bg-rose-100/70 p-2.5 rounded-xl border border-rose-200">
-            💡 <strong>Ketuk kata Arab mana saja</strong> untuk mendengar pelafalan fasih dan melihat terjemahan kata per kata!
-          </p>
-
-          {/* Reading Paragraphs with Clickable Arabic Words */}
-          <div className="space-y-3">
-            {story.paragraphs.map((p, pIdx) => (
-              <div key={pIdx} className="bg-white rounded-2xl p-4 border border-rose-200 shadow-xs">
-                {/* Clickable Word Blocks */}
-                <div className="flex flex-wrap items-center justify-end gap-1.5 mb-2.5" dir="rtl">
-                  {p.words.map((w, wIdx) => {
-                    const isSelected = activeWordGloss?.ar === w.ar;
-                    const isSaved = savedWords.includes(w.ar);
-
-                    return (
-                      <button
-                        key={wIdx}
-                        onClick={() => handleTapWord(w)}
-                        className={`font-arabic text-xl px-2.5 py-1 rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-rose-600 text-white ring-2 ring-rose-400 scale-105 shadow-sm font-bold'
-                            : isSaved
-                            ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold'
-                            : 'bg-rose-50 hover:bg-rose-100 text-slate-800 border border-rose-100 font-semibold'
-                        }`}
-                      >
-                        {w.ar}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Indonesian Translation & Translit */}
-                <div className="pt-2 border-t border-rose-100">
-                  <p className="text-xs font-semibold text-slate-700">{p.translation}</p>
-                  <p className="text-[11px] text-slate-400 italic mt-0.5">{p.translit}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Word Popover Card (Tap-Gloss) */}
-          <AnimatePresence>
-            {activeWordGloss && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="bg-gradient-to-r from-amber-50 to-rose-50 border-2 border-rose-400 rounded-2xl p-3.5 shadow-md flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => sound.speakArabic(activeWordGloss.ar)}
-                    className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shadow-xs active:scale-95"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <span className="font-arabic text-2xl font-bold text-slate-900 block leading-tight">
-                      {activeWordGloss.ar}
-                    </span>
-                    <span className="text-xs font-bold text-rose-800">
-                      Artinya: "{activeWordGloss.mean}"
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleSaveToCollection(activeWordGloss)}
-                  className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs flex items-center gap-1 shadow-xs active:scale-95 transition-all shrink-0"
-                >
-                  <Bookmark className="w-3.5 h-3.5 fill-slate-950" />
-                  {savedWords.includes(activeWordGloss.ar) ? 'Tersimpan' : 'Simpan Kata'}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Bottom Completion Action */}
-          <div className="pt-2">
-            {!isFinishedReading ? (
-              <button
-                onClick={handleCompleteStory}
-                className="w-full py-3.5 bg-gradient-to-r from-rose-600 to-amber-600 text-white rounded-2xl font-bold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <span>Tandai Selesai Membaca Naskah Ini</span>
-                <CheckCircle2 className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 text-center text-xs text-emerald-900 font-bold">
-                🎉 Naskah telah selesai dibaca! +70 XP & +4 Bintang ditambahkan ke profilmu.
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    </div>
+      {/* Finish Reading Button */}
+      <div className="pt-2 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={handleCompleteStory}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>Selesai Membaca Gulungan</span>
+        </button>
+      </div>
+    </GameShell>
   );
 };

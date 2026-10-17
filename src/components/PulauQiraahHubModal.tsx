@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   BookOpen,
@@ -19,12 +19,16 @@ import {
   FileText,
   Mail,
   Zap,
-  RotateCcw
+  RotateCcw,
+  Sliders,
+  Check,
+  X,
+  HelpCircle
 } from 'lucide-react';
 import { UserProfile, Island } from '../types/game';
 import { sound } from '../services/sound';
 import { GameStorage } from '../services/storage';
-import { GRADED_READINGS, SKILLS_DATA } from '../data/curriculum';
+import { GRADED_READINGS, SKILLS_DATA, LEXICON_DATA } from '../data/curriculum';
 
 interface PulauQiraahHubModalProps {
   island: Island;
@@ -51,6 +55,19 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
   const [readingLevelFilter, setReadingLevelFilter] = useState<number | 'all'>('all');
   const [fontSizeClass, setFontSizeClass] = useState<'text-xl' | 'text-2xl' | 'text-3xl'>('text-2xl');
   const [showHarakat, setShowHarakat] = useState(true);
+
+  // Fahm al-Maqru' (Reading Comprehension) Quiz State
+  const [activeQuizQuestionIdx, setActiveQuizQuestionIdx] = useState(0);
+  const [storyQuizAnswers, setStoryQuizAnswers] = useState<Record<string, number>>({});
+  const [storyQuizFeedback, setStoryQuizFeedback] = useState<Record<string, 'correct' | 'wrong'>>({});
+
+  // Tree Shelves / Lexicon state
+  const [shelvesLevelFilter, setShelvesLevelFilter] = useState<number | 'all'>('all');
+  const [shelvesSearch, setShelvesSearch] = useState('');
+
+  // Curriculum state
+  const [curriculumLevelFilter, setCurriculumLevelFilter] = useState<number | 'all'>('all');
+  const [curriculumSearch, setCurriculumSearch] = useState('');
 
   // Hudhud Daily Letters State
   const [activeLetterIdx, setActiveLetterIdx] = useState(0);
@@ -79,7 +96,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
       date: 'Surat Senja: Rahasia Tanda Harakat',
       preview: 'Harakat bagaikan lentera jalan...',
       ar: 'يَا طَالِبَ العِلْمِ، إِنَّ الحَرَكَاتِ (الفَتْحَةَ وَالكَسْرَةَ وَالضَّمَّةَ) مِثْلُ المَصَابِيحِ الَّتِي تُنِيرُ طَرِيقَ القَارِئِ. تَأَنَّ فِي القِرَاءَةِ وَلَا تَتَعَجَّلْ!',
-      translit: 'Yā ṭāliba l-ʿilmi, inna l-ḥarakāti (al-fatḥata wa-l-kasrata wa-ḍ-ḍammata) mithlu l-maṣābīḥi llatī tunīru ṭarīqa l-qāriʾ. Taʾanna fī l-qirāʾati wa-lā tataʿajjal!',
+      translit: 'Yā ṭāliba l-ʿilmi, inna l-ḥarakāti (al-fatḥata wa-l-kasrata wa-ḍ-ḍammata) mithlu l-maṣābīḥi llatī tunīru ṭarīqa l-qāriʾ. Taʾanna fī l-qirāʾati wa-l-lā tataʿajjal!',
       translation: 'Wahai penuntut ilmu, sesungguhnya harakat (fathah, kasrah, dan dhammah) ibarat pelita lentera yang menerangi jalan sang pembaca. Bacalah dengan cermat dan jangan terburu-buru!',
       question: 'Menurut Hudhud, harakat diibaratkan seperti apa bagi pembaca?',
       options: [
@@ -107,10 +124,12 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
     }
   ];
 
-  const filteredStories = GRADED_READINGS.filter(story => {
-    if (readingLevelFilter === 'all') return true;
-    return story.level === readingLevelFilter;
-  });
+  const filteredStories = useMemo(() => {
+    return GRADED_READINGS.filter(story => {
+      if (readingLevelFilter === 'all') return true;
+      return story.level === readingLevelFilter;
+    });
+  }, [readingLevelFilter]);
 
   const currentStory = GRADED_READINGS[selectedStoryIdx] || GRADED_READINGS[0];
 
@@ -138,6 +157,25 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
     }
   };
 
+  const handleStoryQuizAnswer = (qIdx: number, optIdx: number) => {
+    const key = `${currentStory.id}_q${qIdx}`;
+    if (storyQuizAnswers[key] !== undefined) return;
+
+    setStoryQuizAnswers(prev => ({ ...prev, [key]: optIdx }));
+    const question = currentStory.quiz[qIdx];
+    const isCorrect = question.options[optIdx].correct;
+
+    if (isCorrect) {
+      sound.playSuccess();
+      setStoryQuizFeedback(prev => ({ ...prev, [key]: 'correct' }));
+      GameStorage.addReward(30, 2, 'qiraah', 5);
+      onReward(30, 2);
+    } else {
+      sound.playGentleRetry();
+      setStoryQuizFeedback(prev => ({ ...prev, [key]: 'wrong' }));
+    }
+  };
+
   const handleAnswerLetter = (letterIdx: number, optIdx: number) => {
     if (letterQuizAnswers[letterIdx] !== undefined) return;
     setLetterQuizAnswers(prev => ({ ...prev, [letterIdx]: optIdx }));
@@ -152,7 +190,35 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
     }
   };
 
-  const qraSkills = SKILLS_DATA.filter(s => s.owner_island === 'QRA');
+  // Filtered Lexicon for QRA
+  const qraLexicon = useMemo(() => {
+    let list = LEXICON_DATA.filter(l => l.owner_island === 'QRA');
+    if (shelvesLevelFilter !== 'all') {
+      list = list.filter(l => l.level === shelvesLevelFilter);
+    }
+    if (shelvesSearch.trim()) {
+      const q = shelvesSearch.toLowerCase();
+      list = list.filter(l =>
+        l.ar_vocalized.includes(q) ||
+        l.translit.toLowerCase().includes(q) ||
+        l.gloss_id.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [shelvesLevelFilter, shelvesSearch]);
+
+  // Filtered Skills for QRA
+  const qraSkills = useMemo(() => {
+    let list = SKILLS_DATA.filter(s => s.owner_island === 'QRA');
+    if (curriculumLevelFilter !== 'all') {
+      list = list.filter(s => s.level === curriculumLevelFilter);
+    }
+    if (curriculumSearch.trim()) {
+      const q = curriculumSearch.toLowerCase();
+      list = list.filter(s => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
+    }
+    return list;
+  }, [curriculumLevelFilter, curriculumSearch]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md">
@@ -182,10 +248,10 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                   </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black font-chibi tracking-wide text-white drop-shadow-xs">
-                  Pusat Membaca Bertingkat & Gulungan Hikmah
+                  Pusat Membaca Bertingkat & Fahm al-Maqrū'
                 </h2>
                 <p className="text-xs text-rose-100 max-w-xl line-clamp-1 mt-0.5">
-                  Buka naskah hikmah berharakat, gunakan teknologi sentuh kata (Tap-Gloss), dan kumpulkan surat harian sahabat Hudhud.
+                  Buka naskah berharakat, sentuh kata (Tap-Gloss), jawab kuis pemahaman bacaan bertingkat, dan pelajari {LEXICON_DATA.filter(l => l.owner_island === 'QRA').length} kosa kata teks.
                 </p>
               </div>
             </div>
@@ -210,7 +276,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
               }`}
             >
               <BookOpen className="w-4 h-4 text-rose-950" />
-              <span>Scroll Tap-Gloss (Baca Bertingkat)</span>
+              <span>Scroll Tap-Gloss & Fahm al-Maqrū'</span>
             </button>
 
             <button
@@ -222,7 +288,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
               }`}
             >
               <BookMarked className="w-4 h-4 text-rose-950" />
-              <span>Rak Naskah & Koleksi Kosakata ({savedWords.length})</span>
+              <span>Rak Naskah & Kamus ({LEXICON_DATA.filter(l => l.owner_island === 'QRA').length} Kata)</span>
             </button>
 
             <button
@@ -253,7 +319,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50/50">
-          {/* TAB 1: SCROLL TAP-GLOSS READER */}
+          {/* TAB 1: SCROLL TAP-GLOSS READER & FAHM AL-MAQRU' */}
           {activeTab === 'scroll_reader' && (
             <div className="space-y-5">
               {/* Top Banner Guide */}
@@ -264,10 +330,10 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-rose-950">
-                      Metode Membaca Berbantuan Tap-Gloss
+                      Metode Membaca Berbantuan Tap-Gloss & Uji Fahm al-Maqrū'
                     </h3>
                     <p className="text-xs text-rose-800">
-                      Ketuk kata mana pun untuk mendengar pelafalan fasih penutur asli dan melihat maknanya secara instan tanpa memecah konsentrasi membaca.
+                      Ketuk kata mana pun untuk mendengar pelafalan fasih penutur asli dan melihat maknanya, lalu tuntaskan kuis pemahaman bacaan bertingkat di bagian bawah!
                     </p>
                   </div>
                 </div>
@@ -276,7 +342,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                 <div className="flex items-center gap-2 self-end md:self-auto shrink-0 text-xs">
                   <div className="bg-white px-2.5 py-1.5 rounded-xl border border-rose-200 flex items-center gap-1.5 shadow-2xs">
                     <Type className="w-3.5 h-3.5 text-rose-600" />
-                    <span className="text-[11px] font-bold text-slate-600">Ukuran Teks:</span>
+                    <span className="text-[11px] font-bold text-slate-600">Ukuran:</span>
                     <button
                       onClick={() => setFontSizeClass('text-xl')}
                       className={`px-1.5 py-0.5 rounded font-bold ${fontSizeClass === 'text-xl' ? 'bg-rose-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -308,40 +374,63 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                         : 'bg-white text-slate-700 border-rose-200 hover:bg-rose-50'
                     }`}
                   >
-                    <span>{showHarakat ? 'Harakat Aktif' : 'Teks Gundul'}</span>
+                    <span>{showHarakat ? 'Harakat Lengkap' : 'Teks Gundul'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* Story Shelf Selector */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
-                <span className="text-[11px] font-black uppercase text-slate-500 shrink-0 mr-1">
-                  Pilih Naskah:
-                </span>
-                {GRADED_READINGS.map((st, idx) => {
-                  const isSelected = selectedStoryIdx === idx;
-                  const isDone = completedStories.includes(st.id);
-
-                  return (
+              {/* Story Shelf Selector with Level Chips */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+                  <span className="text-[11px] font-black uppercase text-slate-500 shrink-0 mr-1 flex items-center gap-1">
+                    <Sliders className="w-3 h-3 text-rose-600" /> Jenjang:
+                  </span>
+                  {(['all', 0, 1, 2, 3, 4, 5] as const).map(lvl => (
                     <button
-                      key={st.id}
+                      key={lvl}
                       onClick={() => {
-                        setSelectedStoryIdx(idx);
-                        setActiveWordGloss(null);
                         sound.playPop();
+                        setReadingLevelFilter(lvl);
                       }}
-                      className={`px-3.5 py-2 rounded-2xl flex items-center gap-2 whitespace-nowrap transition-all shadow-xs border ${
-                        isSelected
-                          ? 'bg-rose-700 text-white border-rose-800 shadow-md scale-102 font-black'
-                          : 'bg-white text-slate-700 border-rose-200 hover:bg-rose-50'
+                      className={`px-2.5 py-1 rounded-lg transition-all whitespace-nowrap ${
+                        readingLevelFilter === lvl
+                          ? 'bg-rose-700 text-white shadow-xs font-black'
+                          : 'bg-white text-slate-700 border border-rose-200 hover:bg-rose-50'
                       }`}
                     >
-                      <span>{st.icon || '📜'}</span>
-                      <span>Jenjang {st.level}: {st.title.split(' ')[0]}</span>
-                      {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 fill-emerald-600" />}
+                      {lvl === 'all' ? 'Semua Jenjang' : `Jenjang ${lvl}`}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
+                  {filteredStories.map((st) => {
+                    const originalIdx = GRADED_READINGS.findIndex(g => g.id === st.id);
+                    const isSelected = selectedStoryIdx === originalIdx;
+                    const isDone = completedStories.includes(st.id);
+
+                    return (
+                      <button
+                        key={st.id}
+                        onClick={() => {
+                          setSelectedStoryIdx(originalIdx);
+                          setActiveWordGloss(null);
+                          setActiveQuizQuestionIdx(0);
+                          sound.playPop();
+                        }}
+                        className={`px-3.5 py-2 rounded-2xl flex items-center gap-2 whitespace-nowrap transition-all shadow-xs border ${
+                          isSelected
+                            ? 'bg-rose-700 text-white border-rose-800 shadow-md scale-102 font-black ring-2 ring-rose-400/40'
+                            : 'bg-white text-slate-700 border-rose-200 hover:bg-rose-50'
+                        }`}
+                      >
+                        <span>{st.icon || '📜'}</span>
+                        <span>J{st.level}: {st.title.split(' ')[0]}</span>
+                        {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300 fill-emerald-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Main Reading Canvas */}
@@ -493,12 +582,104 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                   )}
                 </AnimatePresence>
 
+                {/* MODUL PEMAHAMAN BACAAN (FAHM AL-MAQRU') */}
+                {currentStory.quiz && currentStory.quiz.length > 0 && (
+                  <div className="mt-8 pt-6 border-t-2 border-rose-200 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow">
+                          💡
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                            <span>Modul Pemahaman Bacaan (Fahm al-Maqrū')</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300">
+                              {currentStory.quiz.length} Soal Pemahaman
+                            </span>
+                          </h4>
+                          <p className="text-xs text-slate-500">
+                            Uji pemahaman ide pokok, rincian peristiwa, dan makna kosakata dari naskah yang baru saja kamu baca.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {currentStory.quiz.map((q, qIdx) => {
+                        const answerKey = `${currentStory.id}_q${qIdx}`;
+                        const selectedOpt = storyQuizAnswers[answerKey];
+                        const feedback = storyQuizFeedback[answerKey];
+
+                        return (
+                          <div
+                            key={qIdx}
+                            className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50/60 to-rose-50/60 border border-rose-200 space-y-3"
+                          >
+                            <div className="flex items-center gap-2 text-xs font-bold text-rose-800">
+                              <span className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center text-[11px] font-black">
+                                {qIdx + 1}
+                              </span>
+                              <span>{q.question}</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                              {q.options.map((opt, optIdx) => {
+                                const isPicked = selectedOpt === optIdx;
+                                const isCorrect = opt.correct;
+                                const hasAnswered = selectedOpt !== undefined;
+
+                                return (
+                                  <button
+                                    key={optIdx}
+                                    disabled={hasAnswered}
+                                    onClick={() => handleStoryQuizAnswer(qIdx, optIdx)}
+                                    className={`p-3 rounded-xl text-xs font-bold text-left border transition-all flex items-center justify-between gap-2 ${
+                                      hasAnswered
+                                        ? isCorrect
+                                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                                          : isPicked
+                                          ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
+                                          : 'bg-white text-slate-400 border-slate-200 opacity-60'
+                                        : 'bg-white hover:bg-amber-100 text-slate-800 border-rose-200 shadow-2xs active:scale-95'
+                                    }`}
+                                  >
+                                    <span>{opt.text}</span>
+                                    {hasAnswered && isCorrect && (
+                                      <Check className="w-4 h-4 text-white shrink-0" />
+                                    )}
+                                    {hasAnswered && isPicked && !isCorrect && (
+                                      <X className="w-4 h-4 text-white shrink-0" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {selectedOpt !== undefined && (
+                              <div
+                                className={`p-3 rounded-xl text-xs font-medium ${
+                                  feedback === 'correct'
+                                    ? 'bg-emerald-100 text-emerald-950 border border-emerald-300'
+                                    : 'bg-rose-100 text-rose-950 border border-rose-300'
+                                }`}
+                              >
+                                <strong>{feedback === 'correct' ? '🎉 Tepat Sekali (+30 XP): ' : '💡 Perhatikan: '}</strong>
+                                {q.options[selectedOpt].explanation}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Bottom Story Completion Bar */}
                 <div className="mt-7 pt-4 border-t border-rose-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="text-xs text-slate-500 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-amber-500" />
                     <span>
-                      Hadiah penyelesaian: <strong>+80 XP</strong> & <strong>+5 Bintang</strong> untuk peringkat Hudhud!
+                      Hadiah penyelesaian naskah: <strong>+80 XP</strong> & <strong>+5 Bintang</strong> untuk peringkat Hudhud!
                     </span>
                   </div>
 
@@ -520,7 +701,7 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: TREE SHELVES & VOCABULARY COLLECTION */}
+          {/* TAB 2: TREE SHELVES & COMPREHENSIVE VOCABULARY GLOSSARY */}
           {activeTab === 'tree_shelves' && (
             <div className="space-y-5">
               {/* Header Showcase */}
@@ -530,113 +711,124 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                     Pohon Naskah Bercahaya
                   </span>
                   <h3 className="text-xl font-black">
-                    Rak Koleksi Kosakata Bacaan Mandiri
+                    Rak Naskah & Glosarium Bacaan Perpustakaan
                   </h3>
                   <p className="text-xs text-amber-100 mt-1 max-w-xl">
-                    Semua kata yang kamu tandai saat membaca tersimpan rapi di sini. Ulangi pelafalannya kapan saja untuk memperkuat daya ingat aktif!
+                    Koleksi lengkap {LEXICON_DATA.filter(l => l.owner_island === 'QRA').length} kosakata teks membaca berjenjang (L1-L5) dan buku catatan kata favoritmu!
                   </p>
                 </div>
                 <div className="bg-white/15 px-4 py-3 rounded-2xl border border-white/20 text-center shrink-0">
-                  <span className="text-[11px] font-bold text-amber-200 block">Total Koleksi:</span>
+                  <span className="text-[11px] font-bold text-amber-200 block">Tersimpan di Rak:</span>
                   <span className="text-2xl font-black text-white">{savedWords.length} Kata</span>
                 </div>
               </div>
 
-              {savedWords.length === 0 ? (
-                <div className="bg-white rounded-3xl p-8 border-2 border-dashed border-rose-200 text-center space-y-3">
-                  <div className="text-4xl">📚</div>
-                  <h4 className="text-base font-bold text-slate-800">
-                    Belum Ada Kata yang Disimpan di Rak
+              {/* Saved Words Shelf */}
+              {savedWords.length > 0 && (
+                <div className="bg-white p-4 rounded-2xl border border-rose-200 shadow-xs space-y-3">
+                  <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-2">
+                    <Bookmark className="w-4 h-4 text-rose-600 fill-rose-600" />
+                    <span>Kata yang Ditandai dari Naskah ({savedWords.length})</span>
                   </h4>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto">
-                    Kembalilah ke tab <strong>"Scroll Tap-Gloss"</strong>, ketuk kata mana saja pada naskah, lalu klik tombol <em>"Simpan ke Rak Buku"</em>.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('scroll_reader')}
-                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all inline-flex items-center gap-1.5"
-                  >
-                    <span>Mulai Baca Naskah Sekarang</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {savedWords.map((wordStr, idx) => (
-                    <motion.div
-                      key={idx}
-                      whileHover={{ scale: 1.02 }}
-                      className="bg-white p-4 rounded-2xl border border-rose-200 shadow-xs flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => sound.speakArabic(wordStr)}
-                          className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs shrink-0"
-                          title="Dengarkan audio"
-                        >
-                          <Volume2 className="w-5 h-5" />
-                        </button>
-                        <div>
-                          <span className="font-arabic text-2xl font-bold text-slate-900 block leading-tight">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                    {savedWords.map((wordStr, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-amber-50/50 p-3 rounded-xl border border-rose-100 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            onClick={() => sound.speakArabic(wordStr)}
+                            className="w-8 h-8 rounded-lg bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-800 flex items-center justify-center transition-colors"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                          <span className="font-arabic text-xl font-bold text-slate-900">
                             {wordStr}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            Koleksi Naskah #{idx + 1}
-                          </span>
                         </div>
+                        <button
+                          onClick={() => {
+                            setSavedWords(prev => prev.filter(w => w !== wordStr));
+                            sound.playPop();
+                          }}
+                          className="text-slate-400 hover:text-rose-600 text-xs font-bold"
+                        >
+                          ✕
+                        </button>
                       </div>
-
-                      <button
-                        onClick={() => {
-                          setSavedWords(prev => prev.filter(w => w !== wordStr));
-                          sound.playPop();
-                        }}
-                        className="text-xs text-slate-400 hover:text-rose-600 font-bold p-1"
-                        title="Hapus dari koleksi"
-                      >
-                        ✕
-                      </button>
-                    </motion.div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Curated Vocabulary Showcase of QRA Island */}
-              <div className="mt-8 pt-4 border-t border-rose-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center gap-2">
-                    <BookMarked className="w-4 h-4 text-rose-600" />
-                    <span>Kosa Kata Kunci Literasi Perpustakaan (Kurikulum QRA)</span>
-                  </h4>
-                  <span className="text-[11px] text-rose-700 font-bold">15 Istilah Inti</span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-                  {[
-                    { ar: 'حَدِيقَة', tr: 'ḥadīqah', id: 'Taman Asri', hint: '🌳' },
-                    { ar: 'شَجَرَة', tr: 'syajarah', id: 'Pohon Rindang', hint: '🌲' },
-                    { ar: 'القَمَر', tr: 'al-qamar', id: 'Bulan (Qamariyah)', hint: '🌙' },
-                    { ar: 'الشَّمْس', tr: 'asy-syams', id: 'Matahari (Syamsiyah)', hint: '☀️' },
-                    { ar: 'قِصَّة', tr: 'qiṣṣah', id: 'Kisah / Cerita', hint: '📖' },
-                    { ar: 'مَكْتَبَة', tr: 'maktabah', id: 'Perpustakaan', hint: '🏛️' },
-                    { ar: 'حِكْمَة', tr: 'ḥikmah', id: 'Kebijaksanaan', hint: '💡' },
-                    { ar: 'نَمْلَة', tr: 'namlah', id: 'Semut Fabel', hint: '🐜' },
-                    { ar: 'حَمَامَة', tr: 'ḥamāmah', id: 'Burung Merpati', hint: '🕊️' },
-                    { ar: 'كُتُب', tr: 'kutub', id: 'Buku-Buku (Jamak)', hint: '📚' }
-                  ].map((v, i) => (
-                    <div
-                      key={i}
-                      onClick={() => sound.speakArabic(v.ar)}
-                      className="bg-white p-3 rounded-2xl border border-rose-100 shadow-2xs hover:border-rose-300 hover:shadow-xs cursor-pointer transition-all flex flex-col items-center text-center group"
+              {/* Filter Toolbar for Comprehensive QRA Lexicon */}
+              <div className="bg-white p-3.5 rounded-2xl border border-rose-200 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs">
+                  <span className="text-slate-500 font-bold px-1.5 flex items-center gap-1">
+                    <Sliders className="w-3.5 h-3.5 text-rose-600" /> Level:
+                  </span>
+                  {(['all', 1, 2, 3, 4, 5] as const).map(lvl => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        sound.playPop();
+                        setShelvesLevelFilter(lvl);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap ${
+                        shelvesLevelFilter === lvl
+                          ? 'bg-rose-700 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
                     >
-                      <span className="text-xl mb-1 group-hover:scale-110 transition-transform">{v.hint}</span>
-                      <span className="font-arabic text-xl font-bold text-slate-900 group-hover:text-rose-700">
-                        {v.ar}
-                      </span>
-                      <span className="text-[10px] text-slate-400 italic">{v.tr}</span>
-                      <span className="text-[11px] font-bold text-slate-700 mt-0.5">{v.id}</span>
-                    </div>
+                      {lvl === 'all' ? 'Semua' : `Level ${lvl}`}
+                    </button>
                   ))}
                 </div>
+
+                <div className="relative min-w-[220px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={shelvesSearch}
+                    onChange={(e) => setShelvesSearch(e.target.value)}
+                    placeholder="Cari kosa kata Arab / arti..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+              </div>
+
+              {/* Comprehensive QRA Lexicon Grid (72 words) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {qraLexicon.map((lex) => (
+                  <div
+                    key={lex.id}
+                    onClick={() => sound.speakArabic(lex.ar_vocalized)}
+                    className="bg-white p-4 rounded-2xl border border-rose-200/80 shadow-2xs hover:shadow-xs hover:border-rose-400 cursor-pointer transition-all flex items-start justify-between gap-3 group"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                        <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 font-bold">
+                          L{lex.level}
+                        </span>
+                        <span className="truncate">{lex.category}</span>
+                      </div>
+                      <div className="text-xl font-bold font-arabic text-slate-900 group-hover:text-rose-700 mt-1">
+                        {lex.ar_vocalized}
+                      </div>
+                      <div className="text-xs font-mono text-slate-500 italic">
+                        {lex.translit}
+                      </div>
+                      <div className="text-xs text-slate-700 font-medium mt-0.5">
+                        {lex.gloss_id}
+                      </div>
+                    </div>
+
+                    <div className="w-9 h-9 rounded-xl bg-rose-50 group-hover:bg-rose-600 text-rose-700 group-hover:text-white flex items-center justify-center shrink-0 transition-colors shadow-2xs">
+                      <Volume2 className="w-4 h-4" />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -648,32 +840,29 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
               <div className="bg-gradient-to-r from-rose-700 via-pink-700 to-amber-700 text-white p-5 rounded-3xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-md flex items-center justify-center text-2xl shadow-sm">
-                    🕊️
+                    ✉️
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-200">
-                      Korespondensi Burung Cerdas
+                    <span className="text-[10px] font-black uppercase text-amber-300 tracking-wider">
+                      Korespondensi Burung Pengembara
                     </span>
                     <h3 className="text-xl font-black">
-                      Surat Harian dari Sahabat Hudhud
+                      Arsip Warkat Sahabat Hudhud
                     </h3>
                     <p className="text-xs text-rose-100 mt-0.5">
-                      Hudhud mengirimkan catatan hikmah dari langit Brightoria. Baca suratnya, dengarkan audio suaranya, dan jawab pertanyaan untuk bonus XP!
+                      Buka surat berseri dari sahabat Hudhud, pelajari bait hikmah Arab klasik, dan jawab kuis wacana.
                     </p>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onLaunchGame('hudhud_letter')}
-                  className="px-4 py-2 bg-amber-300 hover:bg-amber-400 text-slate-950 rounded-xl font-black text-xs shadow-md active:scale-95 transition-all shrink-0 flex items-center gap-1.5"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Mainkan Surat Hari Ini</span>
-                </button>
+                <div className="flex items-center gap-1.5 bg-white/15 px-3 py-2 rounded-2xl border border-white/20 text-xs">
+                  <Mail className="w-4 h-4 text-amber-300" />
+                  <span className="font-bold">{HUDHUD_ARCHIVE_LETTERS.length} Surat Tersedia</span>
+                </div>
               </div>
 
-              {/* Letter Selection Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Letter Archive Selector */}
+              <div className="flex gap-2.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
                 {HUDHUD_ARCHIVE_LETTERS.map((letter, idx) => {
                   const isSelected = activeLetterIdx === idx;
                   const isAnswered = letterQuizAnswers[idx] !== undefined;
@@ -685,67 +874,50 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                         setActiveLetterIdx(idx);
                         sound.playPop();
                       }}
-                      className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                      className={`px-4 py-2.5 rounded-2xl border text-left transition-all shrink-0 shadow-xs flex items-center gap-2 ${
                         isSelected
-                          ? 'bg-rose-50 border-rose-400 shadow-md ring-2 ring-rose-300'
-                          : 'bg-white border-slate-200 hover:border-rose-200 shadow-2xs'
+                          ? 'bg-rose-700 text-white border-rose-800 shadow-md font-black ring-2 ring-rose-300'
+                          : 'bg-white text-slate-700 border-rose-200 hover:bg-rose-50'
                       }`}
                     >
+                      <span>✉️</span>
                       <div>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="text-[10px] font-black uppercase text-rose-700 px-2 py-0.5 bg-rose-100 rounded-full">
-                            Surat #{letter.id}
-                          </span>
-                          {isAnswered && (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          )}
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-800 line-clamp-1">
-                          {letter.date}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
-                          {letter.preview}
-                        </p>
+                        <span className="block text-[11px] font-bold">{letter.date.split(':')[0]}</span>
+                        <span className="block text-[10px] opacity-80 truncate max-w-[140px]">{letter.preview}</span>
                       </div>
-
-                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-rose-600 font-bold">
-                        <span>Buka Surat</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </div>
+                      {isAnswered && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 fill-emerald-700" />}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Active Letter Reading & Quiz View */}
+              {/* Active Letter Board */}
               {(() => {
                 const letter = HUDHUD_ARCHIVE_LETTERS[activeLetterIdx];
                 const answeredOptIdx = letterQuizAnswers[activeLetterIdx];
 
                 return (
-                  <div className="bg-amber-50/70 border-2 border-amber-300 rounded-3xl p-5 sm:p-7 shadow-sm space-y-5">
-                    {/* Letter Header */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-amber-200">
+                  <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-amber-200 shadow-sm space-y-5 relative overflow-hidden">
+                    <div className="border-b border-amber-100 pb-3 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-                          {letter.sender}
+                        <span className="text-[10px] font-black uppercase text-amber-700 tracking-wider">
+                          {letter.date}
                         </span>
-                        <h3 className="text-lg font-black text-slate-900 mt-0.5">
-                          📜 {letter.date}
-                        </h3>
+                        <h4 className="text-base font-bold text-slate-900 mt-0.5">
+                          {letter.sender}
+                        </h4>
                       </div>
-
                       <button
                         onClick={() => sound.speakArabic(letter.ar)}
-                        className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-xl font-black text-xs shadow-xs active:scale-95 transition-all flex items-center gap-2"
+                        className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
                       >
                         <Volume2 className="w-4 h-4" />
-                        <span>Dengarkan Surat Hudhud</span>
+                        <span>Dengarkan Surat</span>
                       </button>
                     </div>
 
-                    {/* Letter Arabic Content */}
-                    <div className="bg-white rounded-2xl p-5 border border-amber-200 shadow-2xs space-y-3">
+                    {/* Arabic Letter Text */}
+                    <div className="bg-amber-50/40 p-5 rounded-2xl border border-amber-200/60 space-y-3">
                       <p
                         className="font-arabic text-2xl sm:text-3xl font-bold text-slate-900 leading-relaxed text-right"
                         dir="rtl"
@@ -823,20 +995,56 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: 18 SKILLS CURRICULUM */}
+          {/* TAB 4: 18 SKILLS CURRICULUM WITH FILTERS */}
           {activeTab === 'curriculum' && (
             <div className="space-y-4">
-              <div className="bg-gradient-to-r from-rose-700 to-amber-700 text-white p-4 sm:p-5 rounded-2xl shadow-sm flex items-center justify-between">
+              <div className="bg-gradient-to-r from-rose-700 to-amber-700 text-white p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-base sm:text-lg font-black">
-                    Peta Kurikulum 18 Keterampilan Perpustakaan Qira'ah (QRA)
+                    Peta Kurikulum 18 Keterampilan Perpustakaan Membaca • Tingkat Lanjutan
                   </h3>
                   <p className="text-xs text-rose-100">
                     Mencakup membaca lancar berharakat (L1), jar-majrur & wacana fabel (L2-L3), hingga teks gundul dan syi'ir mahfuzhat (L4-L5).
                   </p>
                 </div>
-                <div className="px-3.5 py-1.5 rounded-xl bg-white/20 text-xs font-black text-amber-200 shrink-0">
-                  18 Kompetensi
+                <div className="px-3.5 py-1.5 rounded-xl bg-white/20 text-xs font-black text-amber-200 shrink-0 self-start sm:self-auto">
+                  {qraSkills.length} Modul Terfilter
+                </div>
+              </div>
+
+              {/* Filter and Search toolbar */}
+              <div className="bg-white p-3 rounded-2xl border border-rose-200 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-xs">
+                  <span className="text-slate-500 font-bold px-1.5 flex items-center gap-1">
+                    <Sliders className="w-3.5 h-3.5 text-rose-600" /> Tingkat:
+                  </span>
+                  {(['all', 1, 2, 3, 4, 5] as const).map(lvl => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        sound.playPop();
+                        setCurriculumLevelFilter(lvl);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap ${
+                        curriculumLevelFilter === lvl
+                          ? 'bg-rose-700 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {lvl === 'all' ? 'Semua' : `Tingkat ${lvl}`}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[220px]">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={curriculumSearch}
+                    onChange={(e) => setCurriculumSearch(e.target.value)}
+                    placeholder="Cari kompetensi membaca..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
                 </div>
               </div>
 
@@ -847,12 +1055,12 @@ export const PulauQiraahHubModal: React.FC<PulauQiraahHubModalProps> = ({
                     className="p-3.5 bg-white rounded-2xl border border-rose-100 shadow-2xs hover:shadow-xs transition-all flex items-start gap-3"
                   >
                     <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-800 flex items-center justify-center font-black text-xs shrink-0">
-                      L{sk.level}
+                      T{sk.level + 1}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase text-rose-600">
-                          {sk.skill_id}
+                        <span className="text-[10px] font-black uppercase text-rose-700">
+                          Tingkat {sk.level + 1} • {sk.skill_id}
                         </span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
                           {sk.scope}

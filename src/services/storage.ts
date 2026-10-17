@@ -38,7 +38,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   skillsMastered: ['HRF-L0-01', 'MFR-L0-01'],
   wordsMastered: ['lx_alif', 'lx_baa', 'lx_wahid'],
   difficultWords: ['lx_tsaa', 'lx_asyarah'],
-  companionRoomDecorations: ['lampu_maroko', 'karpet_emas']
+  companionRoomDecorations: ['lampu_maroko', 'karpet_emas'],
+  achievements: ['ach_first_island']
 };
 
 export class GameStorage {
@@ -107,6 +108,47 @@ export class GameStorage {
     if (!profile.difficultWords.includes(wordId)) {
       profile.difficultWords.push(wordId);
     }
+    this.saveProfile(profile);
+    return profile;
+  }
+
+  public static recordIqraPageCompleted(pageId: string, starsEarned: number = 3, jilid: number = 1): UserProfile {
+    const profile = this.getProfile();
+    if (!profile.iqraProgress) {
+      profile.iqraProgress = {
+        currentJilid: jilid,
+        masteredCards: [],
+        starsEarned: 0,
+        completedPages: [],
+        pageStars: {},
+        lastReadPageId: pageId,
+        totalWordsRead: 0
+      };
+    }
+    const progress = profile.iqraProgress;
+    if (!progress.completedPages) {
+      progress.completedPages = [];
+    }
+    if (!progress.completedPages.includes(pageId)) {
+      progress.completedPages.push(pageId);
+    }
+    if (!progress.pageStars) {
+      progress.pageStars = {};
+    }
+    progress.pageStars[pageId] = Math.max(progress.pageStars[pageId] || 0, starsEarned);
+    progress.lastReadPageId = pageId;
+    progress.currentJilid = Math.max(progress.currentJilid, jilid);
+    this.saveProfile(profile);
+    return profile;
+  }
+
+  public static isIqraPageCompleted(profile: UserProfile, pageId: string): boolean {
+    return Boolean(profile.iqraProgress?.completedPages?.includes(pageId));
+  }
+
+  public static incrementDailyMissionsCompleted(): UserProfile {
+    const profile = this.getProfile();
+    profile.dailyMissionsCompletedCount = (profile.dailyMissionsCompletedCount || 0) + 1;
     this.saveProfile(profile);
     return profile;
   }

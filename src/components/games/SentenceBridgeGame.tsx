@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Volume2, Award, ArrowRight, RotateCcw, CheckCircle2, Sparkles, BookOpen, Layers } from 'lucide-react';
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface SentenceBridgeProps {
   onClose: () => void;
@@ -38,7 +39,7 @@ const BRIDGE_LEVELS: BridgeLevel[] = [
       { id: 'b4_dummy', ar: 'هٰذِهِ', translit: 'hādhihi', gender: 'f' },
     ],
     rulePoint: 'Kesesuaian Mudzakkar',
-    explanation: 'كِتَابٌ adalah kata benda maskulin (mudzakkar), maka kata tunjuknya memakai هٰذَا dan kata sifatnya كَبِيرٌ (sama-sama berstatus mudzakkar dan tanwin dhommah).'
+    explanation: 'كِتَابٌ adalah kata benda maskulin (mudzakkar), maka kata tunjuknya memakai هٰذَا dan sifatnya كَبِيرٌ.'
   },
   {
     id: 'lvl2',
@@ -57,7 +58,7 @@ const BRIDGE_LEVELS: BridgeLevel[] = [
       { id: 'b4_dummy', ar: 'كَبِيرٌ', translit: 'kabīrun', gender: 'm' },
     ],
     rulePoint: 'Tanda Ta\' Marbuthah (ـة)',
-    explanation: 'سَمَكَةٌ berakhiran Ta Marbuthah (ـة) sehingga berstatus muannats (feminin). Kata tunjuknya menggunakan هٰذِهِ dan sifatnya mengikuti memakai akhiran ta marbuthah (كَبِيرَةٌ).'
+    explanation: 'سَمَكَةٌ berakhiran Ta Marbuthah sehingga feminin, kata tunjuknya memakai هٰذِهِ dan sifatnya كَبِيرَةٌ.'
   },
   {
     id: 'lvl3',
@@ -76,12 +77,12 @@ const BRIDGE_LEVELS: BridgeLevel[] = [
       { id: 'b3_4_dummy', ar: 'عَلَى', translit: 'ʿalā', gender: 'neutral' },
     ],
     rulePoint: 'I\'rab Majrur bi-Kasrah',
-    explanation: 'Huruf jar فِي (di dalam) membuat kata benda sesudahnya menjadi majrur dengan harakat akhir kasrah: المَسْجِدِ.'
+    explanation: 'Huruf jar فِي membuat isim sesudahnya menjadi majrur dengan kasrah: المَسْجِدِ.'
   },
   {
     id: 'lvl4',
     theme: 'Frasa Kepemilikan (Idhafah)',
-    levelBadge: 'Tingkat 2 - Mudhaf & Mudhaf Ilaih',
+    levelBadge: 'Tingkat 2 - Mudhaf',
     targetTranslation: 'Buku milik murid itu baru.',
     correctBlocks: [
       { ar: 'كِتَابُ', translit: 'kitābu', gender: 'm' },
@@ -95,7 +96,7 @@ const BRIDGE_LEVELS: BridgeLevel[] = [
       { id: 'b4_4_dummy', ar: 'قَدِيمٌ', translit: 'qadīmun', gender: 'm' },
     ],
     rulePoint: 'Mudhaf tanpa Tanwin',
-    explanation: 'Susunan kepemilikan Idhafah: Mudhaf (كِتَابُ) tidak boleh bertanwin dan tidak memakai alif lam, sedangkan Mudhaf Ilaih (الطَّالِبِ) berharakat kasrah.'
+    explanation: 'Mudhaf (كِتَابُ) tidak bertanwin dan tidak ber-alif lam, mudhaf ilaih (الطَّالِبِ) berharakat kasrah.'
   },
   {
     id: 'lvl5',
@@ -113,55 +114,19 @@ const BRIDGE_LEVELS: BridgeLevel[] = [
       { id: 'b5_3', ar: 'زَيْدٌ', translit: 'zaydun', gender: 'm' },
       { id: 'b5_4_dummy', ar: 'شَرِبَ', translit: 'syariba', gender: 'm' },
     ],
-    rulePoint: 'Maf\'ul Bih Manshub bi-Fathah',
-    explanation: 'Kalimat kata kerja (Jumlah Fi\'liyyah): Diawali kata kerja lampau قَرَأَ, pelaku (Fa\'il) marfu\' زَيْدٌ, dan sasaran objek (Maf\'ul bih) manshub berharakat fathah القُرْآنَ.'
-  },
-  {
-    id: 'lvl6',
-    theme: 'Kaidah Nawasikh (Inna wa Akhawatuha)',
-    levelBadge: 'Tingkat 4 - Penguat Taukid',
-    targetTranslation: 'Sesungguhnya ilmu itu adalah cahaya.',
-    correctBlocks: [
-      { ar: 'إِنَّ', translit: 'inna', gender: 'neutral' },
-      { ar: 'العِلْمَ', translit: 'al-ʿilma', gender: 'm' },
-      { ar: 'نُورٌ', translit: 'nūrun', gender: 'm' }
-    ],
-    scrambledBlocks: [
-      { id: 'b6_1', ar: 'نُورٌ', translit: 'nūrun', gender: 'm' },
-      { id: 'b6_2', ar: 'إِنَّ', translit: 'inna', gender: 'neutral' },
-      { id: 'b6_3', ar: 'العِلْمَ', translit: 'al-ʿilma', gender: 'm' },
-      { id: 'b6_4_dummy', ar: 'العِلْمُ', translit: 'al-ʿilmu', gender: 'm' },
-    ],
-    rulePoint: 'Inna Menashabkan Isim',
-    explanation: 'Huruf penguat إِنَّ menashabkan isim di depannya menjadi fathah (العِلْمَ) dan merafa\'kan khabar-nya tetap berharakat dhommah tanwin (نُورٌ).'
-  },
-  {
-    id: 'lvl7',
-    theme: 'Isim Isyarah Jauh & Keselarasan Jamak',
-    levelBadge: 'Tingkat 5 - Tingkat Lanjut',
-    targetTranslation: 'Itu sebuah mobil yang cepat.',
-    correctBlocks: [
-      { ar: 'تِلْكَ', translit: 'tilka', gender: 'f' },
-      { ar: 'سَيَّارَةٌ', translit: 'sayyāratun', gender: 'f' },
-      { ar: 'سَرِيعَةٌ', translit: 'sarīʿatun', gender: 'f' }
-    ],
-    scrambledBlocks: [
-      { id: 'b7_1', ar: 'سَرِيعَةٌ', translit: 'sarīʿatun', gender: 'f' },
-      { id: 'b7_2', ar: 'تِلْكَ', translit: 'tilka', gender: 'f' },
-      { id: 'b7_3', ar: 'سَيَّارَةٌ', translit: 'sayyāratun', gender: 'f' },
-      { id: 'b7_4_dummy', ar: 'ذٰلِكَ', translit: 'dhālika', gender: 'm' },
-    ],
-    rulePoint: 'Isyarah Jauh Muannats',
-    explanation: 'Untuk kata benda muannats yang jauh, digunakan تِلْكَ (bukan ذٰلِكَ), dan kata sifatnya mengikuti jenis feminin yaitu سَرِيعَةٌ.'
+    rulePoint: 'Maf\'ul Bih Manshub',
+    explanation: 'Diawali fi\'il madhi قَرَأَ, pelaku fā\'il marfu\' زَيْدٌ, dan maf\'ul bih manshub berfathah القُرْآنَ.'
   }
 ];
 
 export const SentenceBridgeGame: React.FC<SentenceBridgeProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [levelIdx, setLevelIdx] = useState(0);
   const [placedBlockIds, setPlacedBlockIds] = useState<string[]>([]);
   const [isCrossed, setIsCrossed] = useState(false);
-  const [isFinishedAll, setIsFinishedAll] = useState(false);
   const [wrongAttempt, setWrongAttempt] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Susun balok kalimat di atas jembatan batu!');
 
   const level = BRIDGE_LEVELS[levelIdx];
 
@@ -192,266 +157,192 @@ export const SentenceBridgeGame: React.FC<SentenceBridgeProps> = ({ onClose, onR
       const sentence = level.correctBlocks.map(b => b.ar).join(' ');
       sound.speakArabic(sentence);
       setIsCrossed(true);
-      GameStorage.addReward(60, 3, 'lughah', 8);
-      onReward(60, 3);
+      setMascotMood('celebrate');
+      setMascotComment('Mumtaz! Jembatan kokoh terhubung sempurna!');
+
+      GameStorage.addReward(50, 2, 'lughah', 8);
+      onReward(50, 2);
+
+      setTimeout(() => {
+        if (levelIdx < BRIDGE_LEVELS.length - 1) {
+          setIsCrossed(false);
+          setPlacedBlockIds([]);
+          setLevelIdx(prev => prev + 1);
+          setMascotMood('happy');
+          setMascotComment('Ngarai baru menanti susunan jembatanmu!');
+        } else {
+          setFlowState('VICTORY');
+        }
+      }, 1600);
     } else {
       sound.playGentleRetry();
       setWrongAttempt(true);
+      setMascotMood('thinking');
+      setMascotComment('Urutan kata belum kokoh! Periksa Mubtada-Khabar atau Fi\'il-Fa\'il.');
       setTimeout(() => setWrongAttempt(false), 800);
     }
   };
 
-  const handleNextLevel = () => {
-    setIsCrossed(false);
-    setPlacedBlockIds([]);
-    if (levelIdx < BRIDGE_LEVELS.length - 1) {
-      setLevelIdx(prev => prev + 1);
-    } else {
-      setIsFinishedAll(true);
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-md">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg bg-gradient-to-b from-indigo-50 to-blue-50 rounded-3xl shadow-2xl border-4 border-blue-400 overflow-hidden flex flex-col max-h-[94vh]"
+    <GameShell
+      title="Jembatan Kalimat Qawaid"
+      titleAr="جِسْرُ الجُمَلِ وَالقَوَاعِدِ"
+      islandName="Pulau Qawaid"
+      islandColor="from-blue-600 via-indigo-600 to-indigo-800"
+      gameIcon="⛰️"
+      targetObjective="Susun balok-balok kata bahasa Arab menjadi kalimat berfaidah sempurna untuk menyeberangi jurang pulau"
+      howToPlay={[
+        { icon: '📝', text: 'Baca arti terjemahan kalimat bahasa Indonesia yang dituju.' },
+        { icon: '🧱', text: 'Ketuk balok kata Arab yang terserak untuk memasangnya di fondasi jembatan.' },
+        { icon: '🌉', text: 'Tekan "Uji Jembatan" untuk memastikan kebenaran susunan kaidah Nahwu!' }
+      ]}
+      speechArabic="اِبْنِ الجِسْرَ بِكَلِمَاتِ القَوَاعِدِ!"
+      speechIntro="Mari menyusun balok kata menjadi jembatan ilmu di tebing Pulau Qawaid!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setLevelIdx(0);
+        setPlacedBlockIds([]);
+        setIsCrossed(false);
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setLevelIdx(0);
+        setPlacedBlockIds([]);
+        setIsCrossed(false);
+      }}
+      onClose={onClose}
+      currentRound={levelIdx + 1}
+      totalRounds={BRIDGE_LEVELS.length}
+      score={levelIdx + 1}
+      maxScore={BRIDGE_LEVELS.length}
+      starsEarned={3}
+      xpEarned={BRIDGE_LEVELS.length * 50}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic={level.correctBlocks[0]?.ar}
+      onPlayTitleAudio={handleSpeakSentence}
+      victorySummary={[
+        { label: 'Jembatan Tuntas', value: `${BRIDGE_LEVELS.length} Ngarai` },
+        { label: 'Kaidah Dipelajari', value: 'Isyarah, Idhafah, Jar' },
+        { label: 'Tingkat Nahwu', value: 'Jumlah Mufidah' },
+        { label: 'Kekokohan Jembatan', value: '⭐⭐⭐ Sempurna' }
+      ]}
+    >
+      {/* Target Translation Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-2xl p-3 sm:p-4 mb-3 text-center shadow-xs">
+        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full inline-block mb-1">
+          {level.levelBadge} • {level.theme}
+        </span>
+        <h3 className="text-sm sm:text-base font-black text-slate-800">
+          "{level.targetTranslation}"
+        </h3>
+        <p className="text-[11px] text-indigo-600 font-semibold mt-0.5">
+          {level.rulePoint}
+        </p>
+      </div>
+
+      {/* Bridge Foundation Deck (Placed Blocks) */}
+      <div
+        className={`min-h-[85px] p-3 rounded-2xl border-3 border-dashed transition-all flex items-center justify-center flex-wrap gap-2.5 my-auto ${
+          isCrossed
+            ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300'
+            : wrongAttempt
+            ? 'bg-rose-50 border-rose-400'
+            : 'bg-slate-50 border-indigo-200'
+        }`}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-900 text-white p-4 flex items-center justify-between shadow-md">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/20">
-                Gunung Qawa'id (QWD)
-              </span>
-              <span className="text-[11px] bg-amber-400 text-slate-900 font-extrabold px-2 py-0.5 rounded-full">
-                {level.levelBadge}
-              </span>
-            </div>
-            <h2 className="text-xl font-bold font-chibi flex items-center gap-2 mt-1">
-              ⛰️ Sentence Bridge Builder
-            </h2>
-          </div>
+        {placedBlockIds.length === 0 ? (
+          <span className="text-xs text-slate-400 font-medium italic">
+            Ketuk balok di bawah untuk meletakkannya di jembatan...
+          </span>
+        ) : (
+          placedBlockIds.map((blockId, idx) => {
+            const block = level.scrambledBlocks.find(b => b.id === blockId)!;
+            return (
+              <motion.button
+                key={blockId}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                onClick={() => handleSelectBlock(blockId)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-arabic text-xl sm:text-2xl font-black shadow-md cursor-pointer border-2 border-indigo-300 hover:bg-indigo-700 flex flex-col items-center leading-none"
+              >
+                <span>{block.ar}</span>
+                <span className="text-[10px] font-sans font-normal text-indigo-100 mt-1">
+                  {block.translit}
+                </span>
+              </motion.button>
+            );
+          })
+        )}
+      </div>
+
+      {/* Available Scrambled Blocks */}
+      <div className="pt-3">
+        <span className="text-[11px] font-bold text-slate-500 block mb-2">
+          Pilihan Balok Kata Tersedia:
+        </span>
+        <div className="flex items-center justify-center flex-wrap gap-2">
+          {level.scrambledBlocks.map(block => {
+            const isUsed = placedBlockIds.includes(block.id);
+            return (
+              <button
+                key={block.id}
+                disabled={isUsed}
+                onClick={() => handleSelectBlock(block.id)}
+                className={`px-3.5 py-2 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center leading-tight ${
+                  isUsed
+                    ? 'bg-slate-100 text-slate-300 border-slate-200 opacity-40 cursor-not-allowed'
+                    : 'bg-white hover:bg-indigo-50 text-slate-800 border-indigo-200 shadow-xs hover:border-indigo-400 hover:scale-102'
+                }`}
+              >
+                <span className="font-arabic text-lg sm:text-xl font-black text-slate-800">
+                  {block.ar}
+                </span>
+                <span className="text-[10px] text-slate-500">{block.translit}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bridge Bottom Action Button */}
+      <div className="pt-3 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            sound.playPop();
+            setPlacedBlockIds([]);
+          }}
+          className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+        >
+          Reset Susunan
+        </button>
+
+        <div className="flex items-center gap-2">
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
+            type="button"
+            onClick={handleSpeakSentence}
+            className="p-2 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-900 transition-colors"
+            title="Dengarkan Contoh Lafal"
           >
-            ✕
+            <Volume2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            disabled={placedBlockIds.length !== level.correctBlocks.length}
+            onClick={handleTestBridge}
+            className={`px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all flex items-center gap-1.5 ${
+              placedBlockIds.length === level.correctBlocks.length
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer active:scale-95'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
+          >
+            <span>Uji Jembatan</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-blue-100 h-2">
-          <div
-            className="bg-blue-600 h-2 transition-all duration-300"
-            style={{ width: `${((levelIdx + 1) / BRIDGE_LEVELS.length) * 100}%` }}
-          />
-        </div>
-
-        {/* Game Body */}
-        <div className="p-4 flex-1 flex flex-col overflow-y-auto">
-          {!isFinishedAll ? (
-            <>
-              {/* Target Statement Card */}
-              <div className="bg-white rounded-2xl p-3.5 border border-blue-200 shadow-sm mb-3 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">
-                      Topik Kaidah: {level.theme}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                    "{level.targetTranslation}"
-                  </h3>
-                </div>
-                {isCrossed && (
-                  <button
-                    onClick={handleSpeakSentence}
-                    className="w-10 h-10 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-800 flex items-center justify-center transition-colors shadow-xs"
-                    title="Dengar Lafal Kalimat"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Gorge Cliff & Jembatan Visual Scene */}
-              <div className={`relative h-44 rounded-2xl bg-gradient-to-b from-sky-400 via-blue-300 to-indigo-950 border-2 overflow-hidden flex flex-col justify-between p-3 mb-3 shadow-inner transition-colors ${
-                wrongAttempt ? 'border-rose-400' : 'border-indigo-300'
-              }`}>
-                {/* Cloud and cliff peaks */}
-                <div className="flex justify-between items-start text-xs font-extrabold text-white/95">
-                  <span className="bg-slate-900/50 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/20">
-                    🏔️ Tebing Mubtada'
-                  </span>
-                  <span className="bg-slate-900/50 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/20">
-                    🏔️ Puncak Khabar
-                  </span>
-                </div>
-
-                {/* Bridge Slot Area (RTL orientation) */}
-                <div className="flex items-center justify-center gap-2 my-auto" dir="rtl">
-                  {Array.from({ length: level.correctBlocks.length }).map((_, idx) => {
-                    const blockId = placedBlockIds[idx];
-                    const block = blockId ? level.scrambledBlocks.find(b => b.id === blockId) : null;
-
-                    return (
-                      <motion.div
-                        key={idx}
-                        layout
-                        className={`h-16 flex-1 max-w-[110px] rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
-                          block
-                            ? 'bg-amber-100/95 border-amber-500 shadow-md scale-100'
-                            : 'bg-white/30 border-dashed border-white/80 shadow-inner'
-                        }`}
-                      >
-                        {block ? (
-                          <div className="text-center px-1">
-                            <span className="font-arabic font-bold text-lg text-slate-950 block leading-tight">
-                              {block.ar}
-                            </span>
-                            <span className="text-[10px] text-amber-900 font-semibold truncate block">
-                              {block.translit}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs font-bold text-white/80">Balok {idx + 1}</span>
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* Character crossing bridge animation */}
-                <div className="flex justify-between items-end">
-                  <motion.div
-                    animate={isCrossed ? { x: 280 } : { x: 0 }}
-                    transition={{ duration: 1.1, ease: 'easeInOut' }}
-                    className="text-3xl filter drop-shadow-md"
-                  >
-                    🚶‍♂️
-                  </motion.div>
-                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                    isCrossed
-                      ? 'bg-emerald-500 text-white shadow-sm'
-                      : wrongAttempt
-                      ? 'bg-rose-600 text-white animate-shake'
-                      : 'bg-black/50 text-amber-200'
-                  }`}>
-                    {isCrossed ? '✨ Jembatan Kokoh Terhubung!' : wrongAttempt ? '⚠️ Urutan belum tepat!' : '⏳ Susun balok kalimat'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Instruction */}
-              <div className="flex items-center justify-between text-xs text-slate-600 mb-2 font-medium">
-                <span>Pilih balok kata dari kanan ke kiri sesuai susunan bahasa Arab:</span>
-                <span className="font-bold text-blue-700">{placedBlockIds.length}/{level.correctBlocks.length} terpasang</span>
-              </div>
-
-              {/* Scrambled Word Blocks */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                {level.scrambledBlocks.map((block) => {
-                  const isPlaced = placedBlockIds.includes(block.id);
-                  return (
-                    <motion.button
-                      key={block.id}
-                      onClick={() => handleSelectBlock(block.id)}
-                      whileTap={{ scale: 0.96 }}
-                      className={`p-3 rounded-2xl border-2 font-bold transition-all shadow-xs flex items-center justify-between ${
-                        isPlaced
-                          ? 'border-slate-300 bg-slate-100 text-slate-400 opacity-50'
-                          : block.gender === 'm'
-                          ? 'border-blue-400 bg-white hover:border-blue-600 text-blue-950'
-                          : block.gender === 'f'
-                          ? 'border-purple-400 bg-white hover:border-purple-600 text-purple-950'
-                          : 'border-emerald-400 bg-white hover:border-emerald-600 text-emerald-950'
-                      }`}
-                    >
-                      <div className="text-left">
-                        <span className="text-xs font-semibold text-slate-600 block">{block.translit}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-slate-100 text-slate-700">
-                          {block.gender === 'm' ? 'Mudzakkar' : block.gender === 'f' ? 'Muannats' : 'Harf / Kaidah'}
-                        </span>
-                      </div>
-                      <span className="font-arabic text-xl text-slate-900">{block.ar}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-
-              {/* Explanation upon completion */}
-              {isCrossed && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-3.5 mb-3 text-xs text-emerald-950 shadow-xs"
-                >
-                  <p className="font-bold flex items-center gap-1.5 text-emerald-800 mb-1 text-sm">
-                    <BookOpen className="w-4 h-4 text-emerald-600" />
-                    Kaidah Qawa'id: {level.rulePoint}
-                  </p>
-                  <p className="leading-relaxed">{level.explanation}</p>
-                </motion.div>
-              )}
-
-              {/* Bottom Actions */}
-              <div className="flex items-center gap-2 mt-auto pt-2">
-                <button
-                  onClick={() => {
-                    sound.playTap();
-                    setPlacedBlockIds([]);
-                  }}
-                  className="p-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-colors active:scale-95 flex items-center justify-center"
-                  title="Reset Balok"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-
-                {!isCrossed ? (
-                  <button
-                    onClick={handleTestBridge}
-                    disabled={placedBlockIds.length === 0}
-                    className="flex-1 py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 disabled:opacity-50 text-white rounded-2xl font-bold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    Uji Kekuatan Jembatan 🌉
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleNextLevel}
-                    className="flex-1 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    Lanjut Menyeberang <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-              <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3 animate-bounce shadow-md">
-                <Award className="w-12 h-12" />
-              </div>
-              <h3 className="text-2xl font-bold font-chibi text-slate-800">
-                Puncak Gunung Qawa'id Tercapai!
-              </h3>
-              <p className="text-sm text-slate-600 mt-2 max-w-sm">
-                Kamu telah menghubungkan seluruh 7 tingkatan jembatan kalimat: mudzakkar-muannats, huruf jar, idhafah, fi'il-fa'il, hingga kaidah inna!
-              </p>
-              <div className="flex items-center gap-2 mt-4 bg-blue-100 text-blue-900 font-bold px-4 py-2 rounded-2xl text-sm shadow-xs">
-                <span>+180 XP</span> • <span>+8 Bintang</span> • <span>💎 Kristal Safir Aktif</span>
-              </div>
-              <button
-                onClick={onClose}
-                className="mt-6 w-full max-w-xs py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
-              >
-                Kembali ke Kepulauan
-              </button>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </GameShell>
   );
 };

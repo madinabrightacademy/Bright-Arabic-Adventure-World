@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, RefreshCw, Volume2, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, RefreshCw, Volume2, ArrowRight, Award, CheckCircle2, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react';
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
+import { BaseGameModal, GameFlowState } from './BaseGameModal';
 
 interface SandTraceProps {
   onClose: () => void;
@@ -56,6 +57,7 @@ export const ALL_LETTERS_TO_TRACE: TraceLetter[] = [
 ];
 
 export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [selectedSet, setSelectedSet] = useState<1 | 2 | 3 | 4>(1);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [vowelMode, setVowelMode] = useState<'plain' | 'fathah' | 'kasrah' | 'dhammah'>('plain');
@@ -64,6 +66,8 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
   const [isWashingWave, setIsWashingWave] = useState(false);
   const [completedLetters, setCompletedLetters] = useState<string[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Gores pasir mengikuti panduan garis!');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -86,6 +90,7 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
 
   // Draw sand canvas
   useEffect(() => {
+    if (flowState !== 'PLAYING') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -139,7 +144,7 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
         }
       });
     }
-  }, [letter, vowelMode, pathPoints]);
+  }, [flowState, letter, vowelMode, pathPoints]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -147,8 +152,10 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
     setIsDrawing(true);
     setPathPoints([{ x, y }]);
+    sound.playPop();
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -158,279 +165,307 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+
     setPathPoints(prev => [...prev, { x, y }]);
   };
 
   const handlePointerUp = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
-    if (pathPoints.length > 18) {
+
+    if (pathPoints.length > 14) {
       handleVerifyTrace();
     }
+  };
+
+  const triggerOceanWave = () => {
+    setIsWashingWave(true);
+    sound.playSparkle();
+    setTimeout(() => {
+      setPathPoints([]);
+      setIsWashingWave(false);
+    }, 600);
   };
 
   const handleVerifyTrace = () => {
     sound.playSuccess();
     sound.speakArabic(getPronounceText());
-    if (!completedLetters.includes(letter.char)) {
-      setCompletedLetters(prev => [...prev, letter.char]);
-      GameStorage.addReward(50, 3, 'kitabah', 8);
-      onReward(50, 3);
-    }
-    setShowCelebration(true);
-  };
+    setMascotMood('celebrate');
+    setMascotComment(`Mumtaz! Goresan huruf ${letter.name.split(' ')[0]} indah sekali!`);
 
-  const triggerOceanWave = () => {
-    sound.playWave();
-    setIsWashingWave(true);
+    const charKey = `${letter.char}_${vowelMode}`;
+    if (!completedLetters.includes(charKey)) {
+      const nextCompleted = [...completedLetters, charKey];
+      setCompletedLetters(nextCompleted);
+      GameStorage.addReward(35, 1, 'kitabah', 3);
+      onReward(35, 1);
+
+      if (nextCompleted.length >= Math.min(5, filteredLetters.length)) {
+        setTimeout(() => {
+          setFlowState('VICTORY');
+        }, 1200);
+        return;
+      }
+    }
+
+    setShowCelebration(true);
     setTimeout(() => {
-      setPathPoints([]);
-      setIsWashingWave(false);
       setShowCelebration(false);
-    }, 650);
+    }, 1800);
   };
 
   const handleNextLetter = () => {
-    triggerOceanWave();
-    if (currentIdx < filteredLetters.length - 1) {
-      setCurrentIdx(prev => prev + 1);
-    } else {
-      setCurrentIdx(0);
-    }
+    sound.playPop();
+    setPathPoints([]);
+    setShowCelebration(false);
+    setCurrentIdx(prev => (prev + 1) % filteredLetters.length);
+    setMascotMood('happy');
+    setMascotComment('Lanjut ke huruf berikutnya di pantai pasir emas!');
   };
 
   const handlePrevLetter = () => {
-    triggerOceanWave();
-    if (currentIdx > 0) {
-      setCurrentIdx(prev => prev - 1);
-    } else {
-      setCurrentIdx(filteredLetters.length - 1);
+    sound.playPop();
+    setPathPoints([]);
+    setShowCelebration(false);
+    setCurrentIdx(prev => (prev - 1 + filteredLetters.length) % filteredLetters.length);
+  };
+
+  const handleAutoTrace = () => {
+    sound.playSparkle();
+    setMascotMood('cheer');
+    setMascotComment('Malaikat pena membantu menggoreskan pasir emas!');
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    const mockPoints: { x: number; y: number }[] = [];
+    for (let t = 0; t <= Math.PI * 1.5; t += 0.2) {
+      mockPoints.push({
+        x: cx + Math.sin(t) * 45,
+        y: cy + Math.cos(t) * 45
+      });
     }
+    setPathPoints(mockPoints);
+    setTimeout(() => {
+      handleVerifyTrace();
+    }, 400);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-md overflow-y-auto">
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.92, opacity: 0 }}
-        className="w-full max-w-lg bg-amber-50 rounded-[32px] shadow-2xl border-4 border-amber-300 overflow-hidden flex flex-col max-h-[95vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-amber-600 text-white p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/20 uppercase tracking-wider">
-                Pulau Huruf (HRF)
-              </span>
-              <span className="text-[10px] bg-amber-400 text-amber-950 font-extrabold px-2 py-0.5 rounded-full">
-                Mutiara: {completedLetters.length}/{ALL_LETTERS_TO_TRACE.length}
-              </span>
+    <BaseGameModal
+      title="Jejak Pasir Pantai Huruf"
+      titleAr="أَثَرُ الرِّمَالِ فِي الشَّاطِئِ"
+      islandName="Pulau Huruf"
+      islandColor="from-amber-500 via-orange-500 to-amber-700"
+      gameIcon="🏖️"
+      targetObjective="Gores dan kenali 28 huruf hijaiah dengan kaidah khat Naskh di atas pasir pantai emas"
+      howToPlay={[
+        { icon: '🖐️', text: 'Sentuh atau seret jarimu di atas pasir pantai untuk membentuk goresan huruf.' },
+        { icon: '🔊', text: 'Dengarkan lafal makhraj huruf dengan harakat Fathah, Kasrah, atau Dhammah.' },
+        { icon: '🌊', text: 'Tekan "Sapu Ombak" untuk meratakan pasir kembali dan mencoba goresan baru.' }
+      ]}
+      speechArabic="اِرْسُمْ حُرُوفَ اللُّغَةِ العَرَبِيَّةِ فِي الرِّمَالِ!"
+      speechIntro="Mari menggores mutiara huruf hijaiah di tepi pantai Jazirat al-Huruf!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setPathPoints([]);
+        sound.speakArabic(getPronounceText());
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setCompletedLetters([]);
+        setPathPoints([]);
+        setCurrentIdx(0);
+      }}
+      onClose={onClose}
+      currentRound={completedLetters.length + 1}
+      totalRounds={Math.min(5, filteredLetters.length)}
+      score={completedLetters.length}
+      maxScore={Math.min(5, filteredLetters.length)}
+      starsEarned={completedLetters.length >= 4 ? 3 : completedLetters.length >= 2 ? 2 : 1}
+      xpEarned={completedLetters.length * 35}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic={getVocalizedChar()}
+      onPlayTitleAudio={() => sound.speakArabic(getPronounceText())}
+      victorySummary={[
+        { label: 'Huruf Tergores', value: `${completedLetters.length} Huruf` },
+        { label: 'Set Selesai', value: `Set ${selectedSet}` },
+        { label: 'Tingkat Khat', value: 'Naskh Dasar' },
+        { label: 'Mutiara Diperoleh', value: '💎 Berkah' }
+      ]}
+    >
+      {/* Set Selector Pills */}
+      <div className="flex items-center justify-between gap-1.5 pb-2 mb-2 border-b border-amber-200/80 overflow-x-auto text-xs">
+        <span className="font-bold text-slate-700 shrink-0 text-[11px]">Set:</span>
+        <div className="flex items-center gap-1">
+          {[
+            { id: 1 as const, label: 'أ - خ' },
+            { id: 2 as const, label: 'د - ص' },
+            { id: 3 as const, label: 'ض - ق' },
+            { id: 4 as const, label: 'ك - ي' },
+          ].map(s => (
+            <button
+              key={s.id}
+              onClick={() => {
+                sound.playPop();
+                setSelectedSet(s.id);
+                setCurrentIdx(0);
+                setPathPoints([]);
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                selectedSet === s.id
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs ring-1 ring-amber-400'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Vocalization Pills */}
+        <div className="flex items-center gap-1 shrink-0">
+          {(['plain', 'fathah', 'kasrah', 'dhammah'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => {
+                sound.playPop();
+                setVowelMode(v);
+                setPathPoints([]);
+              }}
+              className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                vowelMode === v
+                  ? 'bg-teal-600 text-white font-black shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+              }`}
+            >
+              {v === 'plain' ? 'Asli' : v === 'fathah' ? 'َ (A)' : v === 'kasrah' ? 'ِ (I)' : 'ُ (U)'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Play Area */}
+      <div className="flex flex-col items-center">
+        {/* Letter Card Header */}
+        <div className="flex items-center justify-between w-full max-w-sm mb-2 px-1">
+          <div className="flex items-center gap-2">
+            <span className="font-arabic text-3xl font-black text-amber-800 leading-none">
+              {getVocalizedChar()}
+            </span>
+            <div>
+              <h4 className="text-sm font-black text-slate-800 leading-tight">{letter.name}</h4>
+              <p className="text-[11px] text-slate-500 leading-tight">{letter.guide}</p>
             </div>
-            <h2 className="text-lg font-black font-chibi flex items-center gap-1.5 mt-1">
-              🏖️ Sand Trace (Jejak Pasir Mutiara)
-            </h2>
           </div>
           <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors active:scale-95"
+            type="button"
+            onClick={() => sound.speakArabic(getPronounceText())}
+            className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors shrink-0 shadow-2xs"
+            title="Dengarkan Lafal"
           >
-            ✕
+            <Volume2 className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Set Tab Buttons */}
-        <div className="bg-amber-100/70 p-2 border-b border-amber-200">
-          <div className="grid grid-cols-4 gap-1.5 text-xs font-bold">
-            <button
-              onClick={() => { setSelectedSet(1); setCurrentIdx(0); triggerOceanWave(); }}
-              className={`py-1.5 rounded-xl transition-all ${
-                selectedSet === 1 ? 'bg-teal-700 text-white shadow-xs font-black' : 'bg-white/80 text-slate-700 hover:bg-white'
-              }`}
-            >
-              Set 1 (ا-خ)
-            </button>
-            <button
-              onClick={() => { setSelectedSet(2); setCurrentIdx(0); triggerOceanWave(); }}
-              className={`py-1.5 rounded-xl transition-all ${
-                selectedSet === 2 ? 'bg-teal-700 text-white shadow-xs font-black' : 'bg-white/80 text-slate-700 hover:bg-white'
-              }`}
-            >
-              Set 2 (د-ص)
-            </button>
-            <button
-              onClick={() => { setSelectedSet(3); setCurrentIdx(0); triggerOceanWave(); }}
-              className={`py-1.5 rounded-xl transition-all ${
-                selectedSet === 3 ? 'bg-teal-700 text-white shadow-xs font-black' : 'bg-white/80 text-slate-700 hover:bg-white'
-              }`}
-            >
-              Set 3 (ض-ق)
-            </button>
-            <button
-              onClick={() => { setSelectedSet(4); setCurrentIdx(0); triggerOceanWave(); }}
-              className={`py-1.5 rounded-xl transition-all ${
-                selectedSet === 4 ? 'bg-teal-700 text-white shadow-xs font-black' : 'bg-white/80 text-slate-700 hover:bg-white'
-              }`}
-            >
-              Set 4 (ك-ي)
-            </button>
-          </div>
+        {/* Sand Canvas Frame */}
+        <div className="relative w-full aspect-square max-w-[280px] sm:max-w-[320px] rounded-3xl overflow-hidden border-4 border-amber-400 shadow-inner bg-amber-200 touch-none my-1">
+          <canvas
+            ref={canvasRef}
+            width={320}
+            height={320}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            className="w-full h-full cursor-crosshair"
+          />
+
+          {/* Ocean Wave Wash Animation Overlay */}
+          <AnimatePresence>
+            {isWashingWave && (
+              <motion.div
+                initial={{ y: '100%', opacity: 0.8 }}
+                animate={{ y: '-100%', opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.65, ease: 'easeInOut' }}
+                className="absolute inset-0 bg-gradient-to-t from-cyan-400/80 via-teal-300/80 to-white/90 pointer-events-none flex items-center justify-center"
+              >
+                <div className="text-white text-sm font-bold font-chibi flex items-center gap-2 drop-shadow-md">
+                  🌊 Ombak menyapu pasir pantai...
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* In-canvas Success Celebration Pop */}
+          <AnimatePresence>
+            {showCelebration && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                className="absolute inset-0 bg-teal-950/60 backdrop-blur-xs flex flex-col items-center justify-center p-3 text-center z-20"
+              >
+                <div className="bg-white rounded-3xl p-4 shadow-2xl border-4 border-amber-300 flex flex-col items-center max-w-[240px]">
+                  <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center mb-1 animate-bounce">
+                    <Award className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-sm font-black text-slate-800 font-chibi">Mumtaz! Mutiara Pasir Terbuka!</h4>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Huruf <strong className="font-arabic text-teal-700 text-base">{getVocalizedChar()}</strong> berhasil digores!
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 flex-1 flex flex-col items-center overflow-y-auto">
-          {/* Target Character & Audio bar */}
-          <div className="w-full flex items-center justify-between bg-white rounded-2xl p-3 border border-amber-200 shadow-xs mb-2.5">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => sound.speakArabic(getPronounceText())}
-                className="w-11 h-11 rounded-2xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white flex items-center justify-center shadow-md transition-all shrink-0"
-                title="Dengarkan pengucapan fasih"
-              >
-                <Volume2 className="w-5 h-5" />
-              </button>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Huruf Telusur:</p>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-black text-slate-900">{letter.name}</h3>
-                  <span className="font-arabic text-xl font-bold text-teal-800">{getVocalizedChar()}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Vowel Switcher */}
-            <div className="flex gap-1 bg-amber-50 p-1 rounded-xl border border-amber-200 text-xs">
-              <button
-                onClick={() => setVowelMode('plain')}
-                className={`px-2 py-1 rounded-lg font-bold transition-all ${vowelMode === 'plain' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-600'}`}
-                title="Huruf Polos"
-              >
-                Polos
-              </button>
-              <button
-                onClick={() => setVowelMode('fathah')}
-                className={`px-2 py-1 rounded-lg font-bold font-arabic transition-all ${vowelMode === 'fathah' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-600'}`}
-                title="Fathah (a)"
-              >
-                ـَ
-              </button>
-              <button
-                onClick={() => setVowelMode('kasrah')}
-                className={`px-2 py-1 rounded-lg font-bold font-arabic transition-all ${vowelMode === 'kasrah' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-600'}`}
-                title="Kasrah (i)"
-              >
-                ـِ
-              </button>
-              <button
-                onClick={() => setVowelMode('dhammah')}
-                className={`px-2 py-1 rounded-lg font-bold font-arabic transition-all ${vowelMode === 'dhammah' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-600'}`}
-                title="Dhammah (u)"
-              >
-                ـُ
-              </button>
-            </div>
-          </div>
-
-          {/* Stroke steps guide */}
-          <div className="bg-amber-100/80 border border-amber-200 rounded-2xl p-2.5 w-full mb-3 text-xs">
-            <span className="font-bold text-amber-950 block mb-1">✍️ Kaidah Urutan Goresan (Khat Naskh):</span>
-            <div className="flex flex-wrap gap-1.5 text-[11px] text-amber-900">
-              {letter.strokeSteps.map((step, sIdx) => (
-                <span key={sIdx} className="bg-white/80 px-2 py-0.5 rounded-lg border border-amber-200/60">
-                  {step}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Interactive Beach Sand Canvas */}
-          <div className="relative w-full aspect-square max-w-[320px] rounded-3xl overflow-hidden border-4 border-amber-400 shadow-inner bg-amber-200 touch-none my-auto">
-            <canvas
-              ref={canvasRef}
-              width={320}
-              height={320}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              className="w-full h-full cursor-crosshair"
-            />
-
-            {/* Ocean Wave Wash Animation Overlay */}
-            <AnimatePresence>
-              {isWashingWave && (
-                <motion.div
-                  initial={{ y: '100%', opacity: 0.8 }}
-                  animate={{ y: '-100%', opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.65, ease: 'easeInOut' }}
-                  className="absolute inset-0 bg-gradient-to-t from-cyan-400/80 via-teal-300/80 to-white/90 pointer-events-none flex items-center justify-center"
-                >
-                  <div className="text-white text-base font-bold font-chibi flex items-center gap-2 drop-shadow-md">
-                    🌊 Ombak menyapu pasir pantai...
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Success Celebration Overlay */}
-            <AnimatePresence>
-              {showCelebration && (
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="absolute inset-0 bg-teal-950/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center z-20"
-                >
-                  <div className="bg-white rounded-3xl p-5 shadow-2xl border-4 border-amber-300 flex flex-col items-center max-w-[260px]">
-                    <div className="w-14 h-14 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center mb-2 animate-bounce">
-                      <Award className="w-8 h-8" />
-                    </div>
-                    <h4 className="text-base font-black text-slate-800 font-chibi">Mumtaz! Mutiara Pasir Terbuka!</h4>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Mutiara huruf <strong className="font-arabic text-teal-700 text-lg">{getVocalizedChar()}</strong> berhasil digores!
-                    </p>
-                    <div className="mt-3 flex gap-2 w-full">
-                      <button
-                        onClick={handleNextLetter}
-                        className="flex-1 py-2 px-3 bg-gradient-to-r from-amber-500 to-teal-600 text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1 active:scale-95"
-                      >
-                        Huruf Berikutnya <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Action buttons */}
-          <div className="w-full flex items-center justify-between gap-2 mt-3 pt-1">
+        {/* Action Controls */}
+        <div className="w-full max-w-sm flex items-center justify-between gap-2 mt-2 pt-1">
+          <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={triggerOceanWave}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-xs font-bold transition-all active:scale-95 shadow-xs"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 text-xs font-bold transition-all active:scale-95 border border-amber-300"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Sapu Ombak Pasir
+              Sapu Ombak
             </button>
+            <button
+              type="button"
+              onClick={handleAutoTrace}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all active:scale-95 border border-amber-200"
+              title="Bantu buat goresan"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-amber-600" />
+              Bantu
+            </button>
+          </div>
 
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handlePrevLetter}
-                className="p-2 rounded-2xl bg-white hover:bg-amber-100 text-slate-700 border border-amber-200 active:scale-95"
-                title="Huruf Sebelumnya"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleNextLetter}
-                className="flex items-center gap-1 px-4 py-2 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all active:scale-95 shadow-md"
-              >
-                Lanjut Huruf
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handlePrevLetter}
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 active:scale-95"
+              title="Huruf Sebelumnya"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextLetter}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all active:scale-95 shadow-xs"
+            >
+              Lanjut
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
-      </motion.div>
-    </div>
+      </div>
+    </BaseGameModal>
   );
 };

@@ -218,12 +218,80 @@ const MAKHRAJ_LETTERS: MakhrajLetterData[] = [
     sifat: ['Hams', 'Rakhawah', 'Istifal'],
     makhrajAdvice: 'Biarkan nafas berdesir lembut mengalir keluar di antara sela gigi seri atas dan bibir bawah.',
     targetSvg: { cx: 40, cy: 140, color: '#f43f5e' }
+  },
+  {
+    id: 'let_kaf',
+    letter: 'ك',
+    name: 'Kāf (كَاف)',
+    regionId: 'lisan',
+    regionAr: 'اللِّسَان',
+    regionIdText: 'Pangkal Lidah (Depan Qaf)',
+    subLocationAr: 'أَقْصَى اللِّسَان',
+    subLocationId: 'Pangkal lidah depan menyentuh langit-langit keras',
+    vowelDrill: 'كَ - كِ - كُ - أَكْ',
+    exampleWord: 'كَرِيمٌ (Karīm)',
+    exampleMeaning: 'Mulia dan pemurah',
+    sifat: ['Hams', 'Syiddah', 'Istifal'],
+    makhrajAdvice: 'Keluarkan nafas desis halus (hams) tepat saat huruf Kaf sukun terlepas dari langit-langit keras.',
+    targetSvg: { cx: 100, cy: 145, color: '#3b82f6' }
+  },
+  {
+    id: 'let_ra',
+    letter: 'ر',
+    name: 'Rāʾ (رَاء)',
+    regionId: 'lisan',
+    regionAr: 'اللِّسَان',
+    regionIdText: 'Ujung Lidah & Gusi Atas',
+    subLocationAr: 'طَرَفُ اللِّسَان',
+    subLocationId: 'Ujung lidah menempel dekat gusi gigi seri atas',
+    vowelDrill: 'رَ - رِ - رُ - أَرْ',
+    exampleWord: 'رَحْمَةٌ (Raḥmah)',
+    exampleMeaning: 'Rahmat dan kasih sayang',
+    sifat: ['Takrir (1 getaran)', 'Inhiraf', 'Bainiyyah'],
+    makhrajAdvice: 'Batasi getaran ujung lidah cukup satu atau dua getaran lembut, jangan bergetar berlebihan seperti bel.',
+    targetSvg: { cx: 62, cy: 138, color: '#10b981' }
+  },
+  // 4. Al-Jauf (Rongga Mulut & Tenggorokan)
+  {
+    id: 'let_alif_mad',
+    letter: 'ا / و / ي',
+    name: 'Al-Jauf (Huruf Mad)',
+    regionId: 'jauf',
+    regionAr: 'الجَوْف',
+    regionIdText: 'Rongga Udara Mulut & Tenggorokan',
+    subLocationAr: 'تَجْوِيفُ الفَمِ وَالحَلْق',
+    subLocationId: 'Rongga udara lapang dari tenggorokan hingga bibir terbuka',
+    vowelDrill: 'بَا - بُو - بِي',
+    exampleWord: 'سَمَاءٌ (Samāʾ)',
+    exampleMeaning: 'Langit luas terbentang',
+    sifat: ['Khafaʾ', 'Mad & Layyin', 'Rakhawah'],
+    makhrajAdvice: 'Alirkan suara vokal panjang secara lapang tanpa tekanan pada titik lidah mana pun.',
+    targetSvg: { cx: 90, cy: 135, color: '#06b6d4' }
+  },
+  // 5. Al-Khaisyum (Rongga Hidung / Ghunnah)
+  {
+    id: 'let_ghunnah',
+    letter: 'نّ / مّ',
+    name: 'Al-Khaisyum (Ghunnah)',
+    regionId: 'khaisyum',
+    regionAr: 'الخَيْشُوم',
+    regionIdText: 'Pangkal Rongga Hidung',
+    subLocationAr: 'أَقْصَى الأَنْف',
+    subLocationId: 'Rongga hidung bagian dalam penghasil dengung merdu',
+    vowelDrill: 'إِنَّ - عَمَّ',
+    exampleWord: 'جَنَّةٌ (Jannah)',
+    exampleMeaning: 'Taman surga nan indah',
+    sifat: ['Ghunnah 2 ketukan', 'Jahr', 'Bainiyyah'],
+    makhrajAdvice: 'Kirimkan getaran dengung murni ke pangkal hidung selama 2 ketukan saat melafalkan Nun/Mim bertasydid.',
+    targetSvg: { cx: 55, cy: 105, color: '#8b5cf6' }
   }
 ];
 
 // --- MUFRADAT FASIH DATA ---
 interface VocabularyItem {
   id: string;
+  level: number;
+  levelLabel: string;
   category: string;
   ar: string;
   translit: string;
@@ -233,8 +301,11 @@ interface VocabularyItem {
 }
 
 const VOCABULARY_LIST: VocabularyItem[] = [
+  // Tingkat 1 (Level 0 - Tamhidi)
   {
     id: 'voc_1',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
     category: 'Alat Belajar & Madrasah',
     ar: 'قَلَمُ الحِبْرِ',
     translit: 'Qalamul ḥibr',
@@ -244,6 +315,8 @@ const VOCABULARY_LIST: VocabularyItem[] = [
   },
   {
     id: 'voc_2',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
     category: 'Alat Belajar & Madrasah',
     ar: 'كِتَابٌ مُفِيدٌ',
     translit: 'Kitābun mufīd',
@@ -253,6 +326,54 @@ const VOCABULARY_LIST: VocabularyItem[] = [
   },
   {
     id: 'voc_3',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
+    category: 'Makanan & Rezeki',
+    ar: 'مَاءٌ عَذْبٌ',
+    translit: 'Māʾun ʿadzb',
+    meaning: 'Air segar yang jernih',
+    drillSentence: 'أَشْرَبُ مَاءً عَذْبًا بَارِدًا',
+    focusLetter: 'ع'
+  },
+  {
+    id: 'voc_1_4',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
+    category: 'Artikulasi & Halq',
+    ar: 'مَخْرَجُ الحَلْقِ',
+    translit: 'Makhrajul ḥalq',
+    meaning: 'Makhraj artikulasi tenggorokan',
+    drillSentence: 'نَتَدَرَّبُ عَلَى مَخْرَجِ الحَلْقِ الفَصِيح',
+    focusLetter: 'ح'
+  },
+  {
+    id: 'voc_1_5',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
+    category: 'Lisan & Vokal',
+    ar: 'صَوْتٌ جَهْرِيٌّ',
+    translit: 'Ṣawtun jahriyy',
+    meaning: 'Suara vokal jelas berbobot',
+    drillSentence: 'يَنْطَلِقُ الصَّوْتُ الجَهْرِيُّ بِقُوَّةٍ وَوُضُوح',
+    focusLetter: 'ج'
+  },
+  {
+    id: 'voc_1_6',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
+    category: 'Huruf Desis & Shafir',
+    ar: 'صَفِيرُ البُلْبُلِ',
+    translit: 'Ṣafīrul bulbul',
+    meaning: 'Desis tajam merdu kicau burung',
+    drillSentence: 'نُمَيِّزُ حُرُوفَ الصَّفِيرِ كَالصَّادِ وَالسِّين',
+    focusLetter: 'ص'
+  },
+
+  // Tingkat 2 (Level 1 - Mubtadi' 1)
+  {
+    id: 'voc_4',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
     category: 'Alam & Semesta',
     ar: 'شَمْسٌ مُشْرِقَةٌ',
     translit: 'Syamsun musyriqah',
@@ -261,16 +382,9 @@ const VOCABULARY_LIST: VocabularyItem[] = [
     focusLetter: 'ش'
   },
   {
-    id: 'voc_4',
-    category: 'Alam & Semesta',
-    ar: 'قَمَرٌ مُنِيرٌ',
-    translit: 'Qamarun munīr',
-    meaning: 'Bulan yang bersinar lembut',
-    drillSentence: 'نَرَى القَمَرَ فِي اللَّيْلِ',
-    focusLetter: 'ق'
-  },
-  {
     id: 'voc_5',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
     category: 'Makanan & Rezeki',
     ar: 'خُبْزٌ طَازَجٌ',
     translit: 'Khubzun thāzaj',
@@ -280,15 +394,54 @@ const VOCABULARY_LIST: VocabularyItem[] = [
   },
   {
     id: 'voc_6',
-    category: 'Makanan & Rezeki',
-    ar: 'مَاءٌ عَذْبٌ',
-    translit: 'Māʾun ʿadzb',
-    meaning: 'Air segar yang jernih',
-    drillSentence: 'أَشْرَبُ مَاءً عَذْبًا بَارِدًا',
-    focusLetter: 'ع'
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Tempat Tinggal',
+    ar: 'بَيْتٌ جَمِيلٌ',
+    translit: 'Baytun jamīl',
+    meaning: 'Rumah yang indah dan asri',
+    drillSentence: 'أَسْكُنُ فِي بَيْتٍ جَمِيلٍ وَوَاسِع',
+    focusLetter: 'ج'
   },
   {
+    id: 'voc_2_4',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Sapaan & Keramahan',
+    ar: 'السَّلَامُ عَلَيْكُمْ',
+    translit: 'As-salāmu ʿalaykum',
+    meaning: 'Salam damai sejahtera',
+    drillSentence: 'أُلْقِي السَّلَامَ عَلَيْكُمْ بِابْتِسَامَةٍ صَادِقَة',
+    focusLetter: 'س'
+  },
+  {
+    id: 'voc_2_5',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Retorika Lisan',
+    ar: 'طَلَاقَةُ اللِّسَانِ',
+    translit: 'Ṭalāqatul lisān',
+    meaning: 'Kelancaran bertutur kata',
+    drillSentence: 'أَكْتَسِبُ طَلَاقَةَ اللِّسَانِ بِالمُمَارَسَةِ اليَوْمِيَّة',
+    focusLetter: 'ط'
+  },
+  {
+    id: 'voc_2_6',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Ketukan Fonetik',
+    ar: 'مَدٌّ طَبِيعِيٌّ',
+    translit: 'Maddun ṭabīʿiyy',
+    meaning: 'Panjang dua ketukan vokal',
+    drillSentence: 'أَمُدُّ الصَّوْتَ حَرَكَتَيْنِ كَامِلَتَيْنِ فِي الحُرُوف',
+    focusLetter: 'م'
+  },
+
+  // Tingkat 3 (Level 2 - Mubtadi' 2)
+  {
     id: 'voc_7',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
     category: 'Keluarga & Kehidupan',
     ar: 'صَدِيقٌ مُخْلِصٌ',
     translit: 'Ṣadīqun mukhliṣ',
@@ -298,18 +451,270 @@ const VOCABULARY_LIST: VocabularyItem[] = [
   },
   {
     id: 'voc_8',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
     category: 'Keluarga & Kehidupan',
     ar: 'أُسْرَةٌ سَعِيدَةٌ',
     translit: 'Usratun saʿīdah',
     meaning: 'Keluarga yang bahagia',
     drillSentence: 'نَحْنُ نَعِيشُ فِي أُسْرَةٍ سَعِيدَة',
     focusLetter: 'س'
+  },
+  {
+    id: 'voc_9',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
+    category: 'Pendidikan',
+    ar: 'مَدْرَسَةٌ كَبِيرَةٌ',
+    translit: 'Madrasatun kabīrah',
+    meaning: 'Sekolah madrasah yang besar',
+    drillSentence: 'أَتَعَلَّمُ فِي مَدْرَسَةٍ كَبِيرَةٍ وَمُتَفَوِّقَة',
+    focusLetter: 'د'
+  },
+  {
+    id: 'voc_3_4',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
+    category: 'Intonasi Kalimat',
+    ar: 'نَبْرَةُ التَّسَاؤُلِ',
+    translit: 'Nabratut tasāʾul',
+    meaning: 'Intonasi nada kalimat tanya',
+    drillSentence: 'تَرْتَفِعُ نَبْرَةُ الصَّوْتِ عِنْدَ نِهَايَةِ السُّؤَال',
+    focusLetter: 'ن'
+  },
+  {
+    id: 'voc_3_5',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
+    category: 'Kesantunan Lisan',
+    ar: 'حِوَارٌ مُؤَدَّبٌ',
+    translit: 'Ḥiwārun muʾaddab',
+    meaning: 'Percakapan santun bertata krama',
+    drillSentence: 'نَتَبَادَلُ حِوَارًا مُؤَدَّبًا فِي السُّوقِ وَالمَدْرَسَة',
+    focusLetter: 'ح'
+  },
+  {
+    id: 'voc_3_6',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
+    category: 'Doa & Dzikir Lisan',
+    ar: 'دُعَاءُ الهِدَايَةِ',
+    translit: 'Duʿāʾul hidāyah',
+    meaning: 'Doa memohon bimbingan ilmu',
+    drillSentence: 'رَبِّ زِدْنِي عِلْمًا وَنَوِّرْ قَلْبِي بِنُورِ الفَهْم',
+    focusLetter: 'د'
+  },
+
+  // Tingkat 4 (Level 3 - Mutawassith 1)
+  {
+    id: 'voc_10',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Alam & Panorama',
+    ar: 'حَدِيقَةٌ فَيْحَاءُ',
+    translit: 'Ḥadīqatun fayḥāʾ',
+    meaning: 'Taman bunga luas dan semerbak',
+    drillSentence: 'نَتَنَزَّهُ فِي حَدِيقَةٍ فَيْحَاءَ عَطِرَة',
+    focusLetter: 'ح'
+  },
+  {
+    id: 'voc_11',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Ilmu & Peradaban',
+    ar: 'مَكْتَبَةٌ عَامِرَةٌ',
+    translit: 'Maktabatun ʿāmirah',
+    meaning: 'Perpustakaan makmur sarat literatur',
+    drillSentence: 'فِي جَزِيرَتِنَا مَكْتَبَةٌ عَامِرَةٌ بِأُمَّهَاتِ الكُتُب',
+    focusLetter: 'ع'
+  },
+  {
+    id: 'voc_12',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Nilai & Petunjuk',
+    ar: 'طَرِيقُ الهُدَى',
+    translit: 'Ṭarīqul hudā',
+    meaning: 'Jalan petunjuk kebaikan hidup',
+    drillSentence: 'العِلْمُ يَهْدِي السَّالِكَ إِلَى طَرِيقِ الهُدَى',
+    focusLetter: 'ط'
+  },
+  {
+    id: 'voc_4_4',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Pidato & Khitabah',
+    ar: 'خُطْبَةٌ مُوجَزَةٌ',
+    translit: 'Khuṭbatun mūjazah',
+    meaning: 'Pidato singkat bernas menggugah',
+    drillSentence: 'أَلْقَيْتُ خُطْبَةً مُوجَزَةً أَمَامَ جَمْعٍ مِنَ الزُّمَلَاء',
+    focusLetter: 'خ'
+  },
+  {
+    id: 'voc_4_5',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Deskripsi Spontan',
+    ar: 'وَصْفُ المَشْهَدِ',
+    translit: 'Waṣful masyhad',
+    meaning: 'Penggambaran panorama spontan',
+    drillSentence: 'أَصِفُ المَشْهَدَ الطَّبِيعِيَّ بِعُيُونٍ نَاطِقَةٍ وَكَلِمَاتٍ دَقِيقَة',
+    focusLetter: 'و'
+  },
+  {
+    id: 'voc_4_6',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Jeda Tuturan',
+    ar: 'وَقْفٌ وَابْتِدَاءٌ',
+    translit: 'Waqfun wabtidāʾ',
+    meaning: 'Pengaturan nafas dan jeda alami',
+    drillSentence: 'أَقِفُ عِنْدَ تَمَامِ المَعْنَى ثُمَّ أَبْتَدِئُ بِانْسِيَاب',
+    focusLetter: 'ق'
+  },
+
+  // Tingkat 5 (Level 4 - Mutawassith 2)
+  {
+    id: 'voc_13',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Debat & Retorika',
+    ar: 'مُنَاظَرَةٌ أَدَبِيَّةٌ',
+    translit: 'Munāẓaratun adabiyyah',
+    meaning: 'Debat ilmiah beradab tinggi',
+    drillSentence: 'شَارَكْتُ فِي مُنَاظَرَةٍ أَدَبِيَّةٍ حَوْلَ أَسْرَارِ اللُّغَة',
+    focusLetter: 'ظ'
+  },
+  {
+    id: 'voc_14',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Hikmah & Mutiara',
+    ar: 'حِكْمَةٌ بَالِغَةٌ',
+    translit: 'Ḥikmatun bālighah',
+    meaning: 'Hikmah luhur yang mendalam',
+    drillSentence: 'سَمِعْتُ مِنْ شَيْخِ البَلَاغَةِ حِكْمَةً بَالِغَة',
+    focusLetter: 'غ'
+  },
+  {
+    id: 'voc_15',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Kiasan & Sastra',
+    ar: 'سَفِينَةُ الأَمَلِ',
+    translit: 'Safīnatul amal',
+    meaning: 'Bahtera harapan mengarungi samudra',
+    drillSentence: 'نُبْحِرُ مَعًا عَلَى مَتْنِ سَفِينَةِ الأَمَل',
+    focusLetter: 'ف'
+  },
+  {
+    id: 'voc_5_4',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Narasi Cerita',
+    ar: 'سَرْدُ القِصَصِ',
+    translit: 'Sardul qiṣaṣ',
+    meaning: 'Penceritaan kisah fabel hikmah',
+    drillSentence: 'يَتَمَيَّزُ الحَكِيمُ بِسَرْدِ القِصَصِ الجَذَّابَةِ لِلأَطْفَال',
+    focusLetter: 'س'
+  },
+  {
+    id: 'voc_5_5',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Argumentasi Logis',
+    ar: 'حُجَّةٌ دَامِغَةٌ',
+    translit: 'Ḥujjatun dāmighah',
+    meaning: 'Argumen logika kuat tak terbantahkan',
+    drillSentence: 'قَدَّمَ المُنَاظِرُ حُجَّةً دَامِغَةً بِأُسْلُوبٍ عِلْمِيٍّ رَصِين',
+    focusLetter: 'د'
+  },
+  {
+    id: 'voc_5_6',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Mutiara Sajak Amsal',
+    ar: 'أَمْثَالٌ سَائِرَةٌ',
+    translit: 'Amtsālun sāʾirah',
+    meaning: 'Pepatah berirama indah tersohor',
+    drillSentence: 'نَسْتَشْهِدُ بِأَمْثَالٍ سَائِرَةٍ تَزِيدُ الكَلَامَ بَهَاء',
+    focusLetter: 'ث'
+  },
+
+  // Tingkat 6 (Level 5 - Mutamayyiz)
+  {
+    id: 'voc_16',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Orasi & Mimbar',
+    ar: 'خِطَابَةٌ مِنْبَرِيَّةٌ',
+    translit: 'Khiṭābatun minbariyyah',
+    meaning: 'Orasi mimbar agung persuasif',
+    drillSentence: 'أَلْقَى الخَطِيبُ خِطَابَةً مِنْبَرِيَّةً مُؤَثِّرَة',
+    focusLetter: 'خ'
+  },
+  {
+    id: 'voc_17',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Sastra & Balaghah',
+    ar: 'بَلَاغَةُ القَوْلِ',
+    translit: 'Balāghatul qawl',
+    meaning: 'Retorika kesantunan bahasa tertinggi',
+    drillSentence: 'تَتَجَلَّى بَلَاغَةُ القَوْلِ فِي فَصَاحَةِ اللِّسَان',
+    focusLetter: 'ل'
+  },
+  {
+    id: 'voc_18',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Antologi Sastra Klasik',
+    ar: 'دِيوَانُ الفَصَاحَةِ',
+    translit: 'Dīwānul faṣāḥah',
+    meaning: 'Antologi mahakarya sastra lisan',
+    drillSentence: 'جَمَعَ الحُكَمَاءُ نَفَائِسَ الكَلَامِ فِي دِيوَانِ الفَصَاحَة',
+    focusLetter: 'ص'
+  },
+  {
+    id: 'voc_6_4',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Persuasi Mimbar',
+    ar: 'تَأْثِيرُ البَيَانِ',
+    translit: 'Taʾtsīrul bayān',
+    meaning: 'Daya magis kefasihan tutur',
+    drillSentence: 'إِنَّ مِنَ البَيَانِ لَسِحْرًا يَأْسِرُ القُلُوبَ وَالعُقُول',
+    focusLetter: 'ب'
+  },
+  {
+    id: 'voc_6_5',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Respon Spontan Fusha',
+    ar: 'مُقَابَلَةٌ ارْتِجَالِيَّةٌ',
+    translit: 'Muqābalatun irtijāliyyah',
+    meaning: 'Wawancara spontan fasih tanpa teks',
+    drillSentence: 'أُجِيبُ فِي المُقَابَلَةِ الِارْتِجَالِيَّةِ بِطَلَاقَةٍ وَثِقَة',
+    focusLetter: 'ر'
+  },
+  {
+    id: 'voc_6_6',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Lantunan Syair & Bahr',
+    ar: 'إِنْشَادُ الشِّعْرِ',
+    translit: 'Insyādusy syiʿr',
+    meaning: 'Lantunan bait puisi bahr klasik',
+    drillSentence: 'أُنْشِدُ أَبْيَاتَ الشِّعْرِ العَرَبِيِّ عَلَى بَحْرِ الكَامِلِ الأَصِيل',
+    focusLetter: 'ش'
   }
 ];
 
 // --- THALAQAH SENTENCES DATA ---
 interface ThalaqahSentence {
   id: string;
+  level: number;
+  levelLabel: string;
   category: string;
   ar: string;
   translit: string;
@@ -319,8 +724,11 @@ interface ThalaqahSentence {
 }
 
 const THALAQAH_SENTENCES: ThalaqahSentence[] = [
+  // Tingkat 1 (Level 0 - Tamhidi)
   {
     id: 'thl_1',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
     category: 'Sapaan & Tahiyyat',
     ar: 'السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ',
     translit: 'As-salāmu ʿalaykum wa raḥmatullāhi wa barakātuh',
@@ -329,35 +737,123 @@ const THALAQAH_SENTENCES: ThalaqahSentence[] = [
   },
   {
     id: 'thl_2',
-    category: 'Tanya Kabar & Kehangatan',
+    level: 0,
+    levelLabel: 'Tingkat 1 • Tamhidi',
+    category: 'Sapaan Pagi Ramah',
     ar: 'صَبَاحُ الخَيْرِ، كَيْفَ حَالُكَ اليَوْمَ يَا أَخِي؟',
     translit: 'Shabāḥul khayr, kayfa ḥāluka al-yawma yā akhī?',
     meaning: 'Selamat pagi, bagaimana kabarmu hari ini wahai saudaraku?',
     intonationRule: 'Nada istifham (tanya): nada naik sedikit di akhir kata \'اليَوْمَ\' lalu kembali ramah pada \'يَا أَخِي\'.'
   },
+
+  // Tingkat 2 (Level 1 - Mubtadi' 1)
   {
     id: 'thl_3',
-    category: 'Ungkapan Syukur & Penghargaan',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Tanya Kabar & Bersyukur',
+    ar: 'كَيْفَ حَالُكَ اليَوْمَ؟ أَنَا بِخَيْرٍ وَالحَمْدُ لِلَّه',
+    translit: 'Kayfa ḥāluka al-yawm? Anā bi-khayrin wal-ḥamdu lillāh',
+    meaning: 'Bagaimana kabarmu hari ini? Aku sehat wal afiat dan segala puji bagi Allah',
+    intonationRule: 'Tempo tanya-jawab wajar: nada naik lembut pada pertanyaan, lalu nada tenang bersyukur pada tahmid.'
+  },
+  {
+    id: 'thl_4',
+    level: 1,
+    levelLabel: 'Tingkat 2 • Mubtadi\' 1',
+    category: 'Penyambutan Hangat',
+    ar: 'أَهْلًا وَسَهْلًا بِكُمْ فِي مَدِينَتِنَا الجَمِيلَة',
+    translit: 'Ahlan wa sahlan bikum fī madīnatināl jamīlah',
+    meaning: 'Selamat datang kepada kalian semua di kota kami yang indah',
+    intonationRule: 'Nada takrim: intonasi terbuka ramah dan tempo harakat tanwin berturut-turut yang stabil.'
+  },
+
+  // Tingkat 3 (Level 2 - Mubtadi' 2)
+  {
+    id: 'thl_5',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
+    category: 'Ungkapan Syukur & Jamuan',
     ar: 'شُكْرًا جَزِيلًا عَلَى حُسْنِ ضِيَافَتِكُمُ الكَرِيمَة',
     translit: 'Syukran jazīlan ʿalā ḥusni dhiyāfatikumul karīmah',
     meaning: 'Terima kasih banyak atas jamuan ramah yang begitu mulia',
     intonationRule: 'Nada takrim (penghargaan): intonasi mantap dan tulus dengan penekanan harakat tanwin berturut-turut.'
   },
   {
-    id: 'thl_4',
+    id: 'thl_6',
+    level: 2,
+    levelLabel: 'Tingkat 3 • Mubtadi\' 2',
     category: 'Doa Harian Sahabat',
     ar: 'جَزَاكَ اللهُ خَيْرَ الجَزَاءِ وَبَارَكَ فِي أَهْلِكَ',
     translit: 'Jazākallāhu khayral jazāʾi wa bāraka fī ahlik',
     meaning: 'Semoga Allah membalasmu dengan sebaik-baik balasan dan memberkahi keluargamu',
     intonationRule: 'Nada du\'a: khusyuk, syahdu dan hembusan nafas lembut pada huruf Ha di lafadz Jalalah.'
   },
+
+  // Tingkat 4 (Level 3 - Mutawassith 1)
   {
-    id: 'thl_5',
+    id: 'thl_7',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
+    category: 'Permohonan Petunjuk Sopan',
+    ar: 'مِنْ فَضْلِكَ، دُلَّنِي عَلَى طَرِيقِ المَكْتَبَةِ العَامَّة',
+    translit: 'Min faḍlika, dullanī ʿalā ṭarīqil maktabatil ʿāmmah',
+    meaning: 'Mohon kebaikanmu, tunjukkanlah kepadaku jalan menuju perpustakaan umum',
+    intonationRule: 'Nada kesantunan tinggi: intonasi melunak pada "Min fadlik" dan nada tanya informatif yang jelas.'
+  },
+  {
+    id: 'thl_8',
+    level: 3,
+    levelLabel: 'Tingkat 4 • Mutawassith 1',
     category: 'Hikmah & Mutiara Bahasa',
     ar: 'العِلْمُ صَيْدٌ وَالكِتَابَةُ قَيْدُهُ، قَيِّدْ صُيُودَكَ بِالحِبَالِ',
     translit: 'Al-ʿilmu ṣaydun wal-kitābatu qayduh, qayyid ṣuyūdaka bil-ḥibāl',
     meaning: 'Ilmu itu ibarat buruan dan tulisan adalah pengikatnya, maka ikatlah buruanmu dengan tali yang kokoh',
-    intonationRule: 'Nada balaghah / syi\'ir: ketukan berima di jeda tanda koma, menunjukkan wibawa seorang thalibul ilmi.'
+    intonationRule: 'Nada balaghah / syi\'ir: ketukan berima di jeda tanda koma, menunjukkan wibawa seorang penuntut ilmu.'
+  },
+
+  // Tingkat 5 (Level 4 - Mutawassith 2)
+  {
+    id: 'thl_9',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Narasi Pembuka Hikmah',
+    ar: 'كَانَ يَا مَا كَانَ فِي قَدِيمِ الزَّمَانِ، حَكِيمٌ يَجُوبُ البِلَادَ لِنَشْرِ النُّور',
+    translit: 'Kāna yā mā kāna fī qadīmiz-zamān, ḥakīmun yajūbul bilāda li-nasyri n-nūr',
+    meaning: 'Pada suatu hari di zaman dahulu kala, seorang bijak berkelana menyebarkan lentera cahaya',
+    intonationRule: 'Nada narasi qishash: tempo lambat mengayun dengan modulasi misterius memikat imajinasi.'
+  },
+  {
+    id: 'thl_10',
+    level: 4,
+    levelLabel: 'Tingkat 5 • Mutawassith 2',
+    category: 'Debat & Dialog Terpelajar',
+    ar: 'أُوَافِقُكَ الرَّأْيَ فِي جَوْهَرِ الفِكْرَةِ، وَلَكِنَّ التَّطْبِيقَ يَحْتَاجُ تَدَرُّجًا',
+    translit: 'Uwāfiqukar-raʾya fī jawharil fikrah, wa lākinnat-taṭbīqa yaḥtāju tadarrujan',
+    meaning: 'Aku sepakat denganmu pada hakikat gagasan ini, namun implementasinya butuh langkah bertahap',
+    intonationRule: 'Nada munazharah santun: nada afirmatif di paruh awal, lalu nada jeda pertimbangan bijaksana.'
+  },
+
+  // Tingkat 6 (Level 5 - Mutamayyiz)
+  {
+    id: 'thl_11',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Orasi Mimbar Agung',
+    ar: 'أَيُّهَا الحُضُورُ الكِرَامُ، إِنَّ الفَصَاحَةَ شَرَفُ اللِّسَانِ وَمِفْتَاحُ القُلُوب',
+    translit: 'Ayyuhal ḥuḍūrul kirām, innal faṣāḥata syaraful lisāni wa miftāḥul qulūb',
+    meaning: 'Wahai hadirin yang mulia, sesungguhnya kefasihan adalah mahkota lisan dan kunci pembuka hati',
+    intonationRule: 'Nada khitabah mimbar: suara vokal lantang terproyeksi mantap dengan hening dramatis di jeda frasa.'
+  },
+  {
+    id: 'thl_12',
+    level: 5,
+    levelLabel: 'Tingkat 6 • Mutamayyiz',
+    category: 'Sastra Lisan Puisi Klasik',
+    ar: 'إِذَا الشَّعْبُ يَوْمًا أَرَادَ الحَيَاةَ * فَلَا بُدَّ أَنْ يَسْتَجِيبَ القَدَر',
+    translit: 'Idzasy-syaʿbu yawman arādal ḥayāh * Fa-lā budda an yastajībal qadar',
+    meaning: 'Bila suatu kaum menghendaki kehidupan merdeka, tak pelak takdir niscaya kan menyambutnya',
+    intonationRule: 'Nada insyad bahr mutaqarib: mengayun puitis dengan penekanan qafiyah huruf Ra di akhir bait.'
   }
 ];
 
@@ -372,7 +868,9 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
   const [selectedLetterIdx, setSelectedLetterIdx] = useState(0);
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>('all');
   const [selectedVocabIdx, setSelectedVocabIdx] = useState(0);
+  const [selectedVocabLevel, setSelectedVocabLevel] = useState<number | 'all'>('all');
   const [selectedThalaqahIdx, setSelectedThalaqahIdx] = useState(0);
+  const [selectedThalaqahLevel, setSelectedThalaqahLevel] = useState<number | 'all'>('all');
 
   // Microphone & Recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -400,9 +898,17 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
     ? MAKHRAJ_LETTERS
     : MAKHRAJ_LETTERS.filter(l => l.regionId === selectedRegionFilter);
 
+  const filteredVocab = selectedVocabLevel === 'all'
+    ? VOCABULARY_LIST
+    : VOCABULARY_LIST.filter(v => v.level === selectedVocabLevel);
+
+  const filteredThalaqah = selectedThalaqahLevel === 'all'
+    ? THALAQAH_SENTENCES
+    : THALAQAH_SENTENCES.filter(s => s.level === selectedThalaqahLevel);
+
   const currentLetter = filteredLetters[selectedLetterIdx] || filteredLetters[0];
-  const currentVocab = VOCABULARY_LIST[selectedVocabIdx];
-  const currentThalaqah = THALAQAH_SENTENCES[selectedThalaqahIdx];
+  const currentVocab = filteredVocab[selectedVocabIdx] || filteredVocab[0] || VOCABULARY_LIST[0];
+  const currentThalaqah = filteredThalaqah[selectedThalaqahIdx] || filteredThalaqah[0] || THALAQAH_SENTENCES[0];
 
   useEffect(() => {
     return () => {
@@ -901,12 +1407,46 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
                   <p className="text-xs text-slate-500">Latihan pelafalan kosakata penting dengan harakat presisi dan artikulasi fasih</p>
                 </div>
                 <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-xl">
-                  {VOCABULARY_LIST.length} Kata Pilihan
+                  {filteredVocab.length} Kata Pilihan
                 </span>
               </div>
 
+              {/* Level Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                <button
+                  onClick={() => { setSelectedVocabLevel('all'); setSelectedVocabIdx(0); }}
+                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+                    selectedVocabLevel === 'all'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-50'
+                  }`}
+                >
+                  Semua ({VOCABULARY_LIST.length})
+                </button>
+                {[
+                  { lvl: 0, label: 'Tingkat 1 • Tamhidi' },
+                  { lvl: 1, label: 'Tingkat 2 • Mubtadi\' 1' },
+                  { lvl: 2, label: 'Tingkat 3 • Mubtadi\' 2' },
+                  { lvl: 3, label: 'Tingkat 4 • Mutawassith 1' },
+                  { lvl: 4, label: 'Tingkat 5 • Mutawassith 2' },
+                  { lvl: 5, label: 'Tingkat 6 • Mutamayyiz' }
+                ].map(({ lvl, label }) => (
+                  <button
+                    key={lvl}
+                    onClick={() => { setSelectedVocabLevel(lvl); setSelectedVocabIdx(0); }}
+                    className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+                      selectedVocabLevel === lvl
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {VOCABULARY_LIST.map((voc, idx) => {
+                {filteredVocab.map((voc, idx) => {
                   const isSelected = selectedVocabIdx === idx;
                   return (
                     <div
@@ -919,9 +1459,14 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
-                          {voc.category}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
+                            {voc.category}
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                            {voc.levelLabel}
+                          </span>
+                        </div>
                         <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-900 font-arabic text-sm font-bold flex items-center justify-center">
                           {voc.focusLetter}
                         </span>
@@ -986,17 +1531,56 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
             <div className="space-y-4">
               <div>
                 <h3 className="font-extrabold text-sm text-slate-900">Thalaqah Sentences (Kelancaran & Intonasi Lisan)</h3>
-                <p className="text-xs text-slate-500">Kuasai ritme dan intonasi khas penutur asli untuk percakapan fungsional dan doa</p>
+                <p className="text-xs text-slate-500">Kuasai ritme dan intonasi khas penutur asli untuk percakapan fungsional, doa, dan sastra</p>
+              </div>
+
+              {/* Level Filter Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                <button
+                  onClick={() => { setSelectedThalaqahLevel('all'); setSelectedThalaqahIdx(0); }}
+                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+                    selectedThalaqahLevel === 'all'
+                      ? 'bg-orange-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-50'
+                  }`}
+                >
+                  Semua ({THALAQAH_SENTENCES.length})
+                </button>
+                {[
+                  { lvl: 0, label: 'Tingkat 1 • Tamhidi' },
+                  { lvl: 1, label: 'Tingkat 2 • Mubtadi\' 1' },
+                  { lvl: 2, label: 'Tingkat 3 • Mubtadi\' 2' },
+                  { lvl: 3, label: 'Tingkat 4 • Mutawassith 1' },
+                  { lvl: 4, label: 'Tingkat 5 • Mutawassith 2' },
+                  { lvl: 5, label: 'Tingkat 6 • Mutamayyiz' }
+                ].map(({ lvl, label }) => (
+                  <button
+                    key={lvl}
+                    onClick={() => { setSelectedThalaqahLevel(lvl); setSelectedThalaqahIdx(0); }}
+                    className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
+                      selectedThalaqahLevel === lvl
+                        ? 'bg-orange-600 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
               {/* Sentences Carousel Card */}
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-3xl p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-orange-800 bg-orange-200/80 px-3 py-1 rounded-full">
-                    Kategori: {currentThalaqah.category}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-orange-800 bg-orange-200/80 px-3 py-1 rounded-full">
+                      Kategori: {currentThalaqah.category}
+                    </span>
+                    <span className="text-xs font-bold text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-full">
+                      {currentThalaqah.levelLabel}
+                    </span>
+                  </div>
                   <span className="text-xs font-bold text-slate-500">
-                    Kalimat {selectedThalaqahIdx + 1} dari {THALAQAH_SENTENCES.length}
+                    Kalimat {selectedThalaqahIdx + 1} dari {filteredThalaqah.length}
                   </span>
                 </div>
 
@@ -1049,8 +1633,8 @@ export const PulauKalamHubModal: React.FC<PulauKalamHubModalProps> = ({
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => setSelectedThalaqahIdx(prev => Math.min(THALAQAH_SENTENCES.length - 1, prev + 1))}
-                      disabled={selectedThalaqahIdx >= THALAQAH_SENTENCES.length - 1}
+                      onClick={() => setSelectedThalaqahIdx(prev => Math.min(filteredThalaqah.length - 1, prev + 1))}
+                      disabled={selectedThalaqahIdx >= filteredThalaqah.length - 1}
                       className="p-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold disabled:opacity-40"
                     >
                       <ChevronRight className="w-4 h-4" />

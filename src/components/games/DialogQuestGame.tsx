@@ -4,6 +4,7 @@ import { Volume2, Mic, MicOff, MessageSquare, Award, ArrowRight, CheckCircle2 } 
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
 import { DIALOGUES_DATA } from '../../data/curriculum';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface DialogQuestProps {
   onClose: () => void;
@@ -11,17 +12,20 @@ interface DialogQuestProps {
 }
 
 export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [selectedScenarioKey, setSelectedScenarioKey] = useState<string>('greeting_market');
   const dialogNodes = DIALOGUES_DATA[selectedScenarioKey] || DIALOGUES_DATA.greeting_market;
   const [currentNodeId, setCurrentNodeId] = useState(dialogNodes[0].id);
   const [history, setHistory] = useState<{ speaker: string; text: string; isUser?: boolean }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Pilih jawaban dialog yang sopan dan fasih!');
 
   const currentNode = dialogNodes.find(n => n.id === currentNodeId) || dialogNodes[0];
 
   const handleSwitchScenario = (key: string) => {
+    sound.playPop();
     setSelectedScenarioKey(key);
     const nodes = DIALOGUES_DATA[key];
     if (nodes && nodes.length > 0) {
@@ -29,7 +33,6 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
     }
     setHistory([]);
     setFeedback(null);
-    setIsCompleted(false);
   };
 
   const handlePlayAudio = (text: string) => {
@@ -41,9 +44,13 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
     if (choice.feedback) {
       sound.playGentleRetry();
       setFeedback(choice.feedback);
+      setMascotMood('thinking');
+      setMascotComment(choice.feedback);
     } else {
       sound.playSuccess();
       setFeedback(null);
+      setMascotMood('celebrate');
+      setMascotComment('Mumtaz! Jawaban percakapanmu sangat santun dan tepat!');
     }
 
     setHistory(prev => [
@@ -53,200 +60,207 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
     ]);
 
     if (choice.nextId) {
-      setCurrentNodeId(choice.nextId);
+      setTimeout(() => {
+        setCurrentNodeId(choice.nextId!);
+        setMascotMood('happy');
+        setMascotComment('Dengarkan respon teman bicaramu!');
+      }, 900);
     } else {
       // Completed conversation
-      setIsCompleted(true);
       GameStorage.addReward(60, 3, 'lisan', 10);
       onReward(60, 3);
+      setTimeout(() => {
+        setFlowState('VICTORY');
+      }, 1200);
     }
   };
 
   const toggleRecording = () => {
     if (!isRecording) {
       setIsRecording(true);
-      // Simulate 2 seconds voice recording
       setTimeout(() => {
         setIsRecording(false);
         sound.playSparkle();
-      }, 2500);
+        setMascotMood('cheer');
+        setMascotComment('Masya Allah! Pelafalan lisanmu semakin fasih!');
+      }, 2000);
     } else {
       setIsRecording(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg bg-emerald-50 rounded-3xl shadow-2xl border-4 border-emerald-300 overflow-hidden flex flex-col max-h-[92vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20">Kampung Hiwar (HWR)</span>
-              <span className="text-xs bg-amber-300 text-amber-950 font-extrabold px-2 py-0.5 rounded-full">Trait Lisan +10</span>
+    <GameShell
+      title="Petualangan Dialog Percakapan"
+      titleAr="مُغَامَرَةُ الحِوَارِ العَرَبِيِّ"
+      islandName="Pulau Hiwar"
+      islandColor="from-emerald-600 via-teal-600 to-emerald-800"
+      gameIcon="💬"
+      targetObjective="Pilih respon dan adab komunikasi bahasa Arab fusha dalam skenario percakapan nyata"
+      howToPlay={[
+        { icon: '👂', text: 'Dengarkan perkataan penutur asli dalam bahasa Arab.' },
+        { icon: '🗣️', text: 'Pilih pilihan respon yang sesuai dengan adab dan tata bahasa yang tepat.' },
+        { icon: '🎙️', text: 'Gunakan tombol mic untuk merekam dan melatih kelancaran pelafalanmu!' }
+      ]}
+      speechArabic="تَحَدَّثْ بِاللُّغَةِ العَرَبِيَّةِ بِكُلِّ ثِقَةٍ!"
+      speechIntro="Mari berlatih hiwar seru di Kampung Percakapan Pulau Hiwar!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setHistory([]);
+        setFeedback(null);
+        handlePlayAudio(currentNode.ar);
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        const nodes = DIALOGUES_DATA[selectedScenarioKey] || DIALOGUES_DATA.greeting_market;
+        setCurrentNodeId(nodes[0].id);
+        setHistory([]);
+        setFeedback(null);
+      }}
+      onClose={onClose}
+      currentRound={history.length / 2 + 1}
+      totalRounds={dialogNodes.length}
+      score={Math.floor(history.length / 2) + 1}
+      maxScore={dialogNodes.length}
+      starsEarned={3}
+      xpEarned={60}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic="حِوَارٌ"
+      onPlayTitleAudio={() => handlePlayAudio(currentNode.ar)}
+      victorySummary={[
+        { label: 'Skenario Tuntas', value: selectedScenarioKey === 'greeting_market' ? 'Di Toko Roti' : 'Bertemu Teman' },
+        { label: 'Giliran Dialog', value: `${history.length} Pertukaran` },
+        { label: 'Kecakapan Adab', value: '⭐⭐⭐ Santun' },
+        { label: 'Kelancaran Lisan', value: '+10 Poin Lisan' }
+      ]}
+    >
+      {/* Scenario Selector Pills */}
+      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-emerald-200/80 overflow-x-auto text-xs">
+        <button
+          onClick={() => handleSwitchScenario('greeting_market')}
+          className={`px-3 py-1 rounded-xl font-bold whitespace-nowrap transition-all ${
+            selectedScenarioKey === 'greeting_market'
+              ? 'bg-emerald-700 text-white font-black shadow-xs ring-1 ring-emerald-400'
+              : 'bg-emerald-50 text-emerald-950 border border-emerald-200'
+          }`}
+        >
+          🥖 Di Toko Roti
+        </button>
+        <button
+          onClick={() => handleSwitchScenario('meet_friend')}
+          className={`px-3 py-1 rounded-xl font-bold whitespace-nowrap transition-all ${
+            selectedScenarioKey === 'meet_friend'
+              ? 'bg-emerald-700 text-white font-black shadow-xs ring-1 ring-emerald-400'
+              : 'bg-emerald-50 text-emerald-950 border border-emerald-200'
+          }`}
+        >
+          🤝 Bertemu Sahabat
+        </button>
+        <button
+          onClick={() => handleSwitchScenario('school_library')}
+          className={`px-3 py-1 rounded-xl font-bold whitespace-nowrap transition-all ${
+            selectedScenarioKey === 'school_library'
+              ? 'bg-emerald-700 text-white font-black shadow-xs ring-1 ring-emerald-400'
+              : 'bg-emerald-50 text-emerald-950 border border-emerald-200'
+          }`}
+        >
+          📚 Perpustakaan
+        </button>
+      </div>
+
+      {/* Dialogue Chat History */}
+      <div className="flex-1 overflow-y-auto space-y-2 p-2 bg-slate-50/70 border border-emerald-200 rounded-2xl min-h-[140px] max-h-[220px]">
+        {history.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}
+          >
+            <span className="text-[10px] text-slate-500 font-bold mb-0.5">{msg.speaker}</span>
+            <div
+              className={`p-2.5 rounded-2xl max-w-[85%] text-xs font-bold leading-relaxed ${
+                msg.isUser
+                  ? 'bg-emerald-600 text-white font-arabic text-sm'
+                  : 'bg-white text-slate-800 border border-slate-200 font-arabic text-sm'
+              }`}
+            >
+              {msg.text}
             </div>
-            <h2 className="text-xl font-bold font-chibi flex items-center gap-2 mt-1">
-              💬 Dialog Quest: Petualangan Percakapan
-            </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
-          >
-            ✕
-          </button>
+        ))}
+
+        {/* Current Speaker Bubble */}
+        <div className="flex flex-col items-start pt-1">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center text-xs">
+              👳‍♂️
+            </span>
+            <span className="text-xs font-black text-emerald-900">{currentNode.speakerName}</span>
+            <button
+              type="button"
+              onClick={() => handlePlayAudio(currentNode.ar)}
+              className="p-1 rounded-full bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="bg-white border-2 border-emerald-300 rounded-2xl p-3 shadow-xs max-w-[90%]">
+            <p className="font-arabic text-xl font-black text-slate-900 leading-snug">
+              {currentNode.ar}
+            </p>
+            <p className="text-xs text-slate-600 italic mt-1">
+              "{currentNode.id_translation}"
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Scenario Switcher */}
-        <div className="bg-emerald-100/80 p-2 border-b border-emerald-200 flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
-          <button
-            onClick={() => handleSwitchScenario('greeting_market')}
-            className={`px-3 py-1 rounded-xl whitespace-nowrap transition-all ${
-              selectedScenarioKey === 'greeting_market' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950 hover:bg-emerald-200'
-            }`}
-          >
-            🥖 Di Toko Roti
-          </button>
-          <button
-            onClick={() => handleSwitchScenario('meet_friend')}
-            className={`px-3 py-1 rounded-xl whitespace-nowrap transition-all ${
-              selectedScenarioKey === 'meet_friend' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950 hover:bg-emerald-200'
-            }`}
-          >
-            🤝 Kenalan Sahabat Baru
-          </button>
-          <button
-            onClick={() => handleSwitchScenario('direction_mosque')}
-            className={`px-3 py-1 rounded-xl whitespace-nowrap transition-all ${
-              selectedScenarioKey === 'direction_mosque' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950 hover:bg-emerald-200'
-            }`}
-          >
-            🕌 Tanya Arah ke Masjid
-          </button>
-          <button
-            onClick={() => handleSwitchScenario('cafe_order')}
-            className={`px-3 py-1 rounded-xl whitespace-nowrap transition-all ${
-              selectedScenarioKey === 'cafe_order' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950 hover:bg-emerald-200'
-            }`}
-          >
-            🫖 Di Kedai Kurma
-          </button>
-          <button
-            onClick={() => handleSwitchScenario('doctor_clinic')}
-            className={`px-3 py-1 rounded-xl whitespace-nowrap transition-all ${
-              selectedScenarioKey === 'doctor_clinic' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950 hover:bg-emerald-200'
-            }`}
-          >
-            🩺 Di Klinik Dokter
-          </button>
+      {/* Branching Response Choices */}
+      <div className="pt-3 space-y-2">
+        <span className="text-[11px] font-bold text-slate-600 block">
+          Pilih Jawaban Balasanmu:
+        </span>
+        <div className="space-y-1.5">
+          {currentNode.choices.map((choice, idx) => (
+            <motion.button
+              key={idx}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleSelectChoice(choice)}
+              className="w-full p-2.5 rounded-2xl bg-white hover:bg-emerald-50/80 border-2 border-emerald-200 hover:border-emerald-400 text-left transition-all shadow-xs cursor-pointer flex items-center justify-between gap-3"
+            >
+              <div>
+                <span className="font-arabic text-base sm:text-lg font-black text-emerald-900 block leading-tight">
+                  {choice.ar}
+                </span>
+                <span className="text-xs text-slate-600 block mt-0.5">
+                  "{choice.id_translation}"
+                </span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-600 shrink-0" />
+            </motion.button>
+          ))}
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="p-4 flex-1 flex flex-col overflow-y-auto">
-          {!isCompleted ? (
-            <>
-              {/* NPC Presentation */}
-              <div className="bg-white rounded-2xl p-4 border border-emerald-200 shadow-sm mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-3xl">👳‍♂️</span>
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-800">{currentNode.speakerName}</h4>
-                      <span className="text-[11px] text-emerald-700 font-semibold">Warga Kampung Hiwar</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handlePlayAudio(currentNode.ar)}
-                    className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all"
-                    title="Dengarkan suara penutur asli"
-                  >
-                    <Volume2 className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Speech Bubble */}
-                <div className="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100">
-                  <p className="font-arabic text-xl font-bold text-slate-900 text-right leading-relaxed mb-1">
-                    {currentNode.ar}
-                  </p>
-                  <p className="text-xs text-slate-600 font-medium italic">
-                    "{currentNode.id_translation}"
-                  </p>
-                </div>
-              </div>
-
-              {/* Feedback note if any */}
-              {feedback && (
-                <div className="bg-amber-100 text-amber-950 text-xs p-3 rounded-2xl mb-3 border border-amber-300">
-                  💡 {feedback}
-                </div>
-              )}
-
-              {/* Choices / Response Options */}
-              <div className="mt-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-emerald-900">Pilih respons yang santun & tepat:</span>
-                  <button
-                    onClick={toggleRecording}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-200 text-emerald-900 hover:bg-emerald-300'
-                    }`}
-                  >
-                    {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                    {isRecording ? 'Merekam ucapanmu...' : 'Mode Latihan Bicara'}
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {currentNode.choices.map((choice, idx) => (
-                    <motion.button
-                      key={idx}
-                      onClick={() => handleSelectChoice(choice)}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full text-left p-3.5 rounded-2xl border-2 border-emerald-300 bg-white hover:border-emerald-500 hover:bg-emerald-50/50 shadow-sm transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-arabic text-lg font-bold text-slate-800 text-right w-full block">
-                          {choice.ar}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
-                        <span className="font-medium">{choice.translit}</span>
-                        <span className="text-emerald-700 italic">"{choice.id_translation}"</span>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 animate-bounce">
-                <Award className="w-12 h-12" />
-              </div>
-              <h3 className="text-2xl font-bold font-chibi text-slate-800">Hiwar Berhasil Diselesaikan!</h3>
-              <p className="text-sm text-slate-600 mt-2 max-w-sm">
-                Kamu telah menyapa dan berbelanja dengan etika serta kesantunan percakapan Arab yang luhur. Trait Lisan Hudhud meningkat!
-              </p>
-              <div className="flex items-center gap-2 mt-4 bg-emerald-100 text-emerald-900 font-bold px-4 py-2 rounded-2xl text-sm">
-                <span>+60 XP</span> • <span>+3 Bintang</span> • <span>Trait Lisan +10</span>
-              </div>
-              <button
-                onClick={onClose}
-                className="mt-6 w-full max-w-xs py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
-              >
-                Kembali ke Kampung Hiwar
-              </button>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+      {/* Voice Practice Button */}
+      <div className="pt-2 flex items-center justify-between">
+        <span className="text-[11px] text-slate-500 font-semibold">
+          Latih ucapan langsung dengan mic:
+        </span>
+        <button
+          type="button"
+          onClick={toggleRecording}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            isRecording
+              ? 'bg-rose-500 text-white animate-pulse'
+              : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300'
+          }`}
+        >
+          {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+          <span>{isRecording ? 'Mendengarkan...' : 'Coba Ucapkan'}</span>
+        </button>
+      </div>
+    </GameShell>
   );
 };

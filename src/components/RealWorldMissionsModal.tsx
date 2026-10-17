@@ -54,7 +54,7 @@ export const RealWorldMissionsModal: React.FC<RealWorldMissionsProps> = ({ profi
           <div className="flex items-center gap-2">
             <Award className="w-6 h-6 text-yellow-300" />
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200 block">Kuil Langit (TMH)</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-200 block">Kuil Langit Adib Agung • Tingkat Mahir Sempurna</span>
               <h2 className="text-xl font-bold font-chibi">Misi Dunia Nyata Terpadu</h2>
             </div>
           </div>

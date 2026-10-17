@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Volume2, Award, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Volume2, Award, Sparkles, ArrowRight, CheckCircle2, RotateCcw, Filter, Anchor } from 'lucide-react';
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface ImlaLighthouseProps {
   onClose: () => void;
   onReward: (xp: number, stars: number) => void;
 }
 
-interface ImlaQuestion {
+export interface ImlaQuestion {
   id: string;
+  level: number;
+  levelLabel: string;
   wordToDictate: string;
   meaning: string;
   translit: string;
@@ -18,227 +21,234 @@ interface ImlaQuestion {
   hint: string;
 }
 
-const IMLA_QUESTIONS: ImlaQuestion[] = [
+export const IMLA_QUESTIONS: ImlaQuestion[] = [
   {
-    id: 'imla1',
-    wordToDictate: 'مَاء',
-    meaning: 'Air minum segar',
-    translit: 'māʾ',
+    id: 'imla_l0_1',
+    level: 0,
+    levelLabel: 'Huruf Pemutus Kiri',
+    wordToDictate: 'بَابٌ',
+    meaning: 'Pintu gerbang pelabuhan',
+    translit: 'bābun',
     options: [
-      { id: '1', ar: 'مَاء', correct: true },
-      { id: '2', ar: 'مَه', correct: false },
-      { id: '3', ar: 'مَا', correct: false },
+      { id: '1', ar: 'بَابٌ', correct: true },
+      { id: '2', ar: 'بـاـبٌ', correct: false },
+      { id: '3', ar: 'تَابٌ', correct: false },
     ],
-    hint: 'Diakhiri dengan hamzah di atas baris (hamzah mutatharrifah).'
+    hint: 'Huruf Alif adalah pemutus kiri, tidak boleh menyambung ke huruf Ba di sebelah kirinya.'
   },
   {
-    id: 'imla2',
-    wordToDictate: 'سَمَكَة',
-    meaning: 'Seekor ikan laut',
-    translit: 'samakah',
+    id: 'imla_l0_2',
+    level: 0,
+    levelLabel: 'Huruf Pemutus Kiri',
+    wordToDictate: 'دَرَسَ',
+    meaning: 'Ia telah belajar tekun',
+    translit: 'darasa',
     options: [
-      { id: '1', ar: 'سَمَكَت', correct: false },
-      { id: '2', ar: 'سَمَكَة', correct: true },
-      { id: '3', ar: 'شَمَكَة', correct: false },
+      { id: '1', ar: 'دَرَـسَ', correct: false },
+      { id: '2', ar: 'دَرَسَ', correct: true },
+      { id: '3', ar: 'ذَرَسَ', correct: false },
     ],
-    hint: 'Kata benda muannats diakhiri dengan Ta Marbuthah (ـة).'
+    hint: 'Huruf Dal dan Ra keduanya adalah pemutus kiri, ditulis mandiri.'
   },
   {
-    id: 'imla3',
-    wordToDictate: 'أَحْمَر',
-    meaning: 'Warna merah',
-    translit: 'aḥmar',
+    id: 'imla_l1_1',
+    level: 1,
+    levelLabel: 'Ta Marbuthah vs Maftuhah',
+    wordToDictate: 'مَدْرَسَة',
+    meaning: 'Gedung sekolah ilmu',
+    translit: 'madrasah',
     options: [
-      { id: '1', ar: 'أَهْمَر', correct: false },
-      { id: '2', ar: 'إِحْمَر', correct: false },
-      { id: '3', ar: 'أَحْمَر', correct: true },
+      { id: '1', ar: 'مَدْرَسَت', correct: false },
+      { id: '2', ar: 'مَدْرَسَة', correct: true },
+      { id: '3', ar: 'مَدْرَسَه', correct: false },
     ],
-    hint: 'Diawali Alif hamzah fathah, diikuti Ha (ح) berdesah bersih.'
+    hint: 'Kata feminin berbunyi "H" saat waqaf wajib berakhiran Ta Marbuthah (ـة).'
+  },
+  {
+    id: 'imla_l1_2',
+    level: 1,
+    levelLabel: 'Alif Lam Syamsiyyah',
+    wordToDictate: 'الشَّمْس',
+    meaning: 'Matahari terik',
+    translit: 'asy-syams',
+    options: [
+      { id: '1', ar: 'الشَّمْس', correct: true },
+      { id: '2', ar: 'أَشَّمْس', correct: false },
+      { id: '3', ar: 'إِلْشَّمْس', correct: false },
+    ],
+    hint: 'Huruf Lam pada Alif Lam Syamsiyyah tetap wajib ditulis meski bunyinya melebur ke Syin.'
   }
 ];
 
 export const ImlaLighthouseGame: React.FC<ImlaLighthouseProps> = ({ onClose, onReward }) => {
-  const [qIdx, setQIdx] = useState(0);
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedOptId, setSelectedOptId] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(0);
-  const [isBeaconLit, setIsBeaconLit] = useState(false);
-  const [answeredId, setAnsweredId] = useState<string | null>(null);
-  const [isFinished, setIsFinished] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Dengarkan dikte mercusuar dan pilih rasm ejaan yang tepat!');
 
-  const currentQ = IMLA_QUESTIONS[qIdx];
+  const q = IMLA_QUESTIONS[currentIdx];
 
-  const handlePlayDictation = () => {
-    sound.speakArabic(currentQ.wordToDictate, 0.8);
+  const playDictation = () => {
+    sound.speakArabic(q.wordToDictate);
   };
 
-  const handleSelectOption = (optId: string) => {
-    if (answeredId) return;
-    setAnsweredId(optId);
+  const handleSelectOption = (opt: { id: string; ar: string; correct: boolean }) => {
+    if (isAnswered) return;
+    setSelectedOptId(opt.id);
+    setIsAnswered(true);
 
-    const isCorrect = currentQ.options.find(o => o.id === optId)?.correct;
-    if (isCorrect) {
+    if (opt.correct) {
       sound.playSuccess();
-      sound.playSparkle();
-      setIsBeaconLit(true);
       setScore(s => s + 1);
-      GameStorage.addReward(50, 3, 'kitabah', 8);
-      onReward(50, 3);
+      setMascotMood('celebrate');
+      setMascotComment(`Mumtaz! Rasm ejaan "${q.wordToDictate}" tepat menyalakan mercusuar!`);
+      GameStorage.addReward(40, 2, 'kitabah', 7);
+      onReward(40, 2);
     } else {
       sound.playGentleRetry();
-      GameStorage.markWordDifficult(currentQ.wordToDictate);
+      setMascotMood('thinking');
+      setMascotComment(q.hint);
     }
   };
 
   const handleNext = () => {
-    setAnsweredId(null);
-    setIsBeaconLit(false);
-    if (qIdx < IMLA_QUESTIONS.length - 1) {
-      setQIdx(i => i + 1);
+    sound.playPop();
+    if (currentIdx < IMLA_QUESTIONS.length - 1) {
+      setCurrentIdx(i => i + 1);
+      setSelectedOptId(null);
+      setIsAnswered(false);
+      setMascotMood('happy');
+      setMascotComment('Dengarkan dikte soal berikutnya!');
     } else {
-      setIsFinished(true);
+      setFlowState('VICTORY');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl shadow-2xl border-4 border-amber-400 overflow-hidden flex flex-col max-h-[92vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-yellow-600 p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20">Pelabuhan Kitabah (KTB)</span>
-              <span className="text-xs bg-slate-900 text-amber-300 font-extrabold px-2 py-0.5 rounded-full">
-                Soal {qIdx + 1}/{IMLA_QUESTIONS.length}
+    <GameShell
+      title="Mercusuar Imla' Kitabah"
+      titleAr="مَنَارَةُ الإِمْلَاءِ وَالكِتَابَةِ"
+      islandName="Pulau Kitabah"
+      islandColor="from-amber-700 via-orange-700 to-stone-900"
+      gameIcon="🗼"
+      targetObjective="Dengarkan dikte audio mercusuar dan pilih penulisan ejaan kaidah rasm Imla' yang tepat"
+      howToPlay={[
+        { icon: '🗼', text: 'Dengarkan kata yang didiktekan dari menara mercusuar.' },
+        { icon: '✍️', text: 'Perhatikan kaidah penulisan (Ta Marbuthah, Alif Lam, huruf pemutus).' },
+        { icon: '💡', text: 'Pilih ejaan yang tepat untuk menyalakan lentera pemandu kapal!' }
+      ]}
+      speechArabic="اِسْتَمِعْ إِلَى الإِمْلَاءِ وَاكْتُبْ بِإِتْقَانٍ!"
+      speechIntro="Mari menyalakan lentera ilmu di Mercusuar Imla' Pulau Kitabah!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setCurrentIdx(0);
+        setScore(0);
+        setSelectedOptId(null);
+        setIsAnswered(false);
+        setTimeout(playDictation, 300);
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setCurrentIdx(0);
+        setScore(0);
+        setSelectedOptId(null);
+        setIsAnswered(false);
+      }}
+      onClose={onClose}
+      currentRound={currentIdx + 1}
+      totalRounds={IMLA_QUESTIONS.length}
+      score={score}
+      maxScore={IMLA_QUESTIONS.length}
+      starsEarned={score >= 3 ? 3 : score >= 2 ? 2 : 1}
+      xpEarned={score * 40}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic={q.wordToDictate}
+      onPlayTitleAudio={playDictation}
+      victorySummary={[
+        { label: 'Dikte Selesai', value: `${score} / ${IMLA_QUESTIONS.length}` },
+        { label: 'Kaidah Rasm', value: 'Ta Marbuthah, Alif Lam' },
+        { label: 'Lentera Menyala', value: 'Lentera Terang Penuh' },
+        { label: 'Ketepatan Ejaan', value: '⭐⭐⭐ Sempurna' }
+      ]}
+    >
+      {/* Category Indicator */}
+      <div className="bg-amber-100/70 rounded-2xl p-2.5 mb-2 border border-amber-300 flex items-center justify-between text-xs">
+        <span className="font-bold text-amber-950">{q.levelLabel}</span>
+        <span className="text-[11px] text-amber-800 font-semibold">{q.meaning}</span>
+      </div>
+
+      {/* Dictation Lighthouse Audio Beacon */}
+      <div className="p-5 rounded-3xl bg-gradient-to-b from-stone-900 to-amber-950 text-white flex flex-col items-center justify-center my-auto shadow-inner border-2 border-amber-500/40">
+        <button
+          type="button"
+          onClick={playDictation}
+          className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center shadow-lg border-4 border-amber-200 cursor-pointer active:scale-95 mb-2"
+          title="Putar Dikte"
+        >
+          <Volume2 className="w-9 h-9" />
+        </button>
+
+        <span className="text-xs font-bold text-amber-200">
+          Ketuk untuk mendengarkan lafal dikte mercusuar
+        </span>
+      </div>
+
+      {/* Spelling Choice Options */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3">
+        {q.options.map(opt => {
+          const isSelected = selectedOptId === opt.id;
+          let style = 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800';
+          if (isAnswered) {
+            if (opt.correct) {
+              style = 'bg-emerald-100 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300';
+            } else if (isSelected) {
+              style = 'bg-rose-100 border-rose-400 text-rose-950';
+            } else {
+              style = 'bg-slate-50 border-slate-200 opacity-60';
+            }
+          }
+
+          return (
+            <motion.button
+              key={opt.id}
+              whileTap={{ scale: 0.97 }}
+              disabled={isAnswered}
+              onClick={() => handleSelectOption(opt)}
+              className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs ${style}`}
+            >
+              <span className="font-arabic text-2xl sm:text-3xl font-black">
+                {opt.ar}
               </span>
-            </div>
-            <h2 className="text-xl font-bold font-chibi flex items-center gap-2 mt-1">
-              🗼 Imla' Lighthouse (Mercusuar Ejaan)
-            </h2>
-          </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Feedback banner & Next Button */}
+      {isAnswered && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2 text-xs"
+        >
+          <p className="text-amber-950 font-medium leading-snug flex-1">
+            💡 {q.hint}
+          </p>
           <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white font-bold transition-colors"
+            type="button"
+            onClick={handleNext}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black flex items-center gap-1 shadow-xs shrink-0 cursor-pointer active:scale-95"
           >
-            ✕
+            <span>{currentIdx < IMLA_QUESTIONS.length - 1 ? 'Soal Berikutnya' : 'Lihat Hasil'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 flex-1 flex flex-col items-center overflow-y-auto">
-          {!isFinished ? (
-            <>
-              {/* Harbor Lighthouse Night Scene */}
-              <div className="relative w-full h-44 rounded-3xl bg-gradient-to-b from-sky-950 to-indigo-900 border-2 border-amber-400/50 shadow-inner flex flex-col items-center justify-between p-3 mb-4 overflow-hidden">
-                {/* Light Beam sweeping across sea if correct */}
-                {isBeaconLit && (
-                  <motion.div
-                    initial={{ opacity: 0, rotate: -40 }}
-                    animate={{ opacity: 1, rotate: [ -30, 30, -10 ] }}
-                    transition={{ duration: 1.5 }}
-                    className="absolute top-2 w-[400px] h-32 bg-gradient-to-r from-yellow-300/40 via-amber-200/20 to-transparent origin-top pointer-events-none filter blur-sm"
-                  />
-                )}
-
-                <div className="flex items-center justify-between w-full text-xs text-amber-200">
-                  <span>⚓ Dermaga Pelabuhan Tinta</span>
-                  <span>{isBeaconLit ? '✨ Mercusuar Menyala Terang!' : '🌙 Menunggu Dikte'}</span>
-                </div>
-
-                {/* Lighthouse Graphic */}
-                <div className="relative my-auto flex flex-col items-center">
-                  <div className={`text-4xl transition-all ${isBeaconLit ? 'scale-125 filter drop-shadow-[0_0_20px_rgba(251,191,36,0.9)]' : 'opacity-80'}`}>
-                    🗼
-                  </div>
-                </div>
-
-                {/* Dictation Play Button */}
-                <button
-                  onClick={handlePlayDictation}
-                  className="px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 active:scale-95 text-slate-950 font-black text-xs shadow-lg flex items-center gap-2 transition-all"
-                >
-                  <Volume2 className="w-4 h-4 fill-slate-950" /> Putar Suara Dikte Imla' 🔊
-                </button>
-              </div>
-
-              <div className="text-center mb-3">
-                <span className="text-xs text-slate-400 block">Arti Kata:</span>
-                <h4 className="text-base font-bold text-amber-300">"{currentQ.meaning}"</h4>
-                <p className="text-[11px] text-slate-400 italic">Pilih bentuk ejaan Arab yang paling tepat sesuai kaidah imla':</p>
-              </div>
-
-              {/* Options */}
-              <div className="grid grid-cols-1 gap-2.5 w-full mb-4">
-                {currentQ.options.map((opt) => {
-                  const isSelected = answeredId === opt.id;
-                  let style = 'bg-white/10 border-white/20 hover:bg-white/20 text-white';
-
-                  if (answeredId) {
-                    if (opt.correct) {
-                      style = 'bg-emerald-600/80 border-emerald-400 text-white font-bold ring-2 ring-emerald-300';
-                    } else if (isSelected) {
-                      style = 'bg-rose-600/80 border-rose-400 text-white';
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleSelectOption(opt.id)}
-                      disabled={Boolean(answeredId)}
-                      className={`p-3.5 rounded-2xl border-2 flex items-center justify-between text-left transition-all ${style}`}
-                    >
-                      <span className="text-xs font-semibold text-slate-300">Pilihan:</span>
-                      <span className="font-arabic text-2xl font-bold">{opt.ar}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Hint after answer */}
-              {answeredId && (
-                <div className="w-full bg-white/10 rounded-2xl p-3 border border-white/20 mb-3 text-xs text-amber-200">
-                  <p className="font-bold flex items-center gap-1 mb-0.5">💡 Kaidah Ejaan Imla':</p>
-                  <p>{currentQ.hint}</p>
-                </div>
-              )}
-
-              {/* Next Button */}
-              {answeredId && (
-                <button
-                  onClick={handleNext}
-                  className="w-full py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold rounded-2xl text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 mt-auto"
-                >
-                  {qIdx < IMLA_QUESTIONS.length - 1 ? 'Soal Dikte Berikutnya' : 'Selesaikan Pelabuhan Kitabah ⚓'}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-              <div className="w-20 h-20 rounded-full bg-amber-400/20 text-amber-300 flex items-center justify-center mb-3 animate-bounce">
-                <Award className="w-12 h-12" />
-              </div>
-              <h3 className="text-2xl font-bold font-chibi text-white">Mercusuar Bercahaya Terang!</h3>
-              <p className="text-xs text-slate-300 mt-2 max-w-sm">
-                Pelabuhan Kitabah tersinari berkas cahaya ejaanmu. Ejaan kata tersimpan rapi di ingatan!
-              </p>
-              <div className="flex items-center gap-2 mt-4 bg-amber-400/20 text-amber-300 font-bold px-4 py-2 rounded-2xl text-xs border border-amber-400/30">
-                <span>+150 XP</span> • <span>+9 Bintang</span>
-              </div>
-              <button
-                onClick={onClose}
-                className="mt-6 w-full max-w-xs py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-bold rounded-2xl shadow-lg active:scale-95 transition-all"
-              >
-                Kembali ke Pelabuhan
-              </button>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      )}
+    </GameShell>
   );
 };

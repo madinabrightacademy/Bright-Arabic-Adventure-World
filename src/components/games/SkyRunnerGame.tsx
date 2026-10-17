@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Award, ArrowLeft, ArrowRight, Zap, Play, Volume2, Sparkles, RefreshCw } from 'lucide-react';
+import { Award, ArrowLeft, ArrowRight, Zap, Play, Volume2, Sparkles, RefreshCw, CheckCircle2, Pause } from 'lucide-react';
 import { sound } from '../../services/sound';
 import { GameStorage } from '../../services/storage';
+import { GameShell, GameFlowState } from './GameShell';
 
 interface SkyRunnerProps {
   onClose: () => void;
@@ -19,25 +20,28 @@ interface RunnerLane {
 interface RunnerWave {
   category: string;
   prompt: string;
+  targetArabic: string;
   subPrompt: string;
   lanes: RunnerLane[];
 }
 
-const RUNNER_WAVES: RunnerWave[] = [
+export const SKY_RUNNER_WAVES: RunnerWave[] = [
   {
     category: 'Makanan & Minuman (الطَّعَام)',
-    prompt: 'Cari kata: "ROTI GANDUM" (Khubz)',
-    subPrompt: 'Pilih jalur kata Arab yang tepat sebelum menabrak gerbang!',
+    prompt: 'Cari kata: "ROTI GANDUM HANGAT"',
+    targetArabic: 'خُبْز',
+    subPrompt: 'Lafalkan "Khubz" dan pilih jalur yang tepat!',
     lanes: [
-      { text: 'مَاء', translit: 'māʾ', meaning: 'Air', correct: false },
-      { text: 'خُبْز', translit: 'khubz', meaning: 'Roti', correct: true },
-      { text: 'حَلِيب', translit: 'ḥalīb', meaning: 'Susu', correct: false },
+      { text: 'مَاء', translit: 'māʾ', meaning: 'Air Segar', correct: false },
+      { text: 'خُبْز', translit: 'khubz', meaning: 'Roti Gandum', correct: true },
+      { text: 'حَلِيب', translit: 'ḥalīb', meaning: 'Susu Murni', correct: false },
     ]
   },
   {
     category: 'Warna Dasar (الأَلْوَان)',
-    prompt: 'Cari kata: "MERAH" (Ahmar)',
-    subPrompt: 'Lihat warna dan teks Arabnya!',
+    prompt: 'Cari kata: "MERAH CERAH"',
+    targetArabic: 'أَحْمَر',
+    subPrompt: 'Warna bendera dan buah delima yang ranum!',
     lanes: [
       { text: 'أَحْمَر', translit: 'aḥmar', meaning: 'Merah', correct: true },
       { text: 'أَزْرَق', translit: 'azraq', meaning: 'Biru', correct: false },
@@ -46,310 +50,274 @@ const RUNNER_WAVES: RunnerWave[] = [
   },
   {
     category: 'Angka Arab (الأَرْقَام)',
-    prompt: 'Cari angka: "TIGA" (Thalatsah - ٣)',
-    subPrompt: 'Kenali lafal dan tulisan bilangan Arab!',
+    prompt: 'Cari angka: "TIGA" (٣)',
+    targetArabic: 'ثَلَاثَة',
+    subPrompt: 'Hitungan ketiga dalam bahasa Arab!',
     lanes: [
-      { text: 'وَاحِد', translit: 'wāḥid', meaning: 'Satu', correct: false },
-      { text: 'ثَلَاثَة', translit: 'thalāthah', meaning: 'Tiga', correct: true },
-      { text: 'اِثْنَان', translit: 'ithnān', meaning: 'Dua', correct: false },
+      { text: 'وَاحِد', translit: 'wāḥid', meaning: 'Satu (١)', correct: false },
+      { text: 'ثَلَاثَة', translit: 'thalāthah', meaning: 'Tiga (٣)', correct: true },
+      { text: 'اِثْنَان', translit: 'ithnān', meaning: 'Dua (٢)', correct: false },
     ]
   },
   {
-    category: 'Benda Sekitar (الأَدَوَات)',
-    prompt: 'Cari kata: "KITAB / BUKU" (Kitab)',
-    subPrompt: 'Benda utama penuntut ilmu!',
+    category: 'Benda Sekitar & Sekolah (الأَدَوَات)',
+    prompt: 'Cari kata: "KITAB / BUKU PELAJARAN"',
+    targetArabic: 'كِتَاب',
+    subPrompt: 'Sumber ilmu pengetahuan para penuntut hikmah!',
     lanes: [
-      { text: 'قَلَم', translit: 'qalam', meaning: 'Pena', correct: false },
-      { text: 'بَاب', translit: 'bāb', meaning: 'Pintu', correct: false },
-      { text: 'كِتَاب', translit: 'kitāb', meaning: 'Kitab', correct: true },
+      { text: 'قَلَم', translit: 'qalam', meaning: 'Pena Kaligrafi', correct: false },
+      { text: 'بَاب', translit: 'bāb', meaning: 'Pintu Gerbang', correct: false },
+      { text: 'كِتَاب', translit: 'kitāb', meaning: 'Buku / Kitab', correct: true },
     ]
   },
   {
     category: 'Fauna Alam (الحَيَوَانَات)',
-    prompt: 'Cari kata: "UNTA GURUN" (Jamal)',
-    subPrompt: 'Hewan tangguh pengembara padang pasir!',
+    prompt: 'Cari kata: "UNTA PADANG PASIR"',
+    targetArabic: 'جَمَل',
+    subPrompt: 'Kapal padang pasir pengembara kafilah!',
     lanes: [
       { text: 'جَمَل', translit: 'jamal', meaning: 'Unta', correct: true },
-      { text: 'حِصَان', translit: 'ḥiṣān', meaning: 'Kuda', correct: false },
-      { text: 'أَسَد', translit: 'asad', meaning: 'Singa', correct: false },
-    ]
-  },
-  {
-    category: 'Profesi & Tokoh (المِهَن)',
-    prompt: 'Cari kata: "DOKTER" (Thabib)',
-    subPrompt: 'Penyembuh dengan izin Allah!',
-    lanes: [
-      { text: 'مُدَرِّس', translit: 'mudarris', meaning: 'Guru', correct: false },
-      { text: 'طَبِيب', translit: 'ṭabīb', meaning: 'Dokter', correct: true },
-      { text: 'تَاجِر', translit: 'tājir', meaning: 'Pedagang', correct: false },
-    ]
-  },
-  {
-    category: 'Kata Kerja Harian (الأَفْعَال)',
-    prompt: 'Cari kata: "DIA MEMBACA" (Qara\'a)',
-    subPrompt: 'Wahyu pertama yang mulia!',
-    lanes: [
-      { text: 'كَتَبَ', translit: 'kataba', meaning: 'Menulis', correct: false },
-      { text: 'ذَهَبَ', translit: 'dhahaba', meaning: 'Pergi', correct: false },
-      { text: 'قَرَأَ', translit: 'qaraʾa', meaning: 'Membaca', correct: true },
+      { text: 'حِصَان', translit: 'ḥiṣān', meaning: 'Kuda Tangkas', correct: false },
+      { text: 'أَسَد', translit: 'asad', meaning: 'Singa Perkasa', correct: false },
     ]
   }
 ];
 
 export const SkyRunnerGame: React.FC<SkyRunnerProps> = ({ onClose, onReward }) => {
+  const [flowState, setFlowState] = useState<GameFlowState>('BRIEFING');
   const [waveIdx, setWaveIdx] = useState(0);
-  const [currentLane, setCurrentLane] = useState<number>(1); // 0: Kiri, 1: Tengah, 2: Kanan
-  const [progress, setProgress] = useState(0); // 0 sampai 100%
+  const [currentLane, setCurrentLane] = useState<number>(1);
+  const [progress, setProgress] = useState(0);
   const [score, setScore] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
   const [hitFeedback, setHitFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
+  const [mascotComment, setMascotComment] = useState('Geser ke jalur gerbang kata yang benar!');
 
-  const wave = RUNNER_WAVES[waveIdx];
+  const wave = SKY_RUNNER_WAVES[waveIdx];
 
   // Moving forward runner loop
   useEffect(() => {
-    if (isFinished || isPaused) return;
+    if (flowState !== 'PLAYING' || isPaused) return;
 
     const interval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 95) {
+        if (prev >= 94) {
           const chosenGate = wave.lanes[currentLane];
           if (chosenGate.correct) {
             sound.playSuccess();
             sound.speakArabic(chosenGate.text);
             setHitFeedback('correct');
             setScore(s => s + 1);
+            setMascotMood('celebrate');
+            setMascotComment(`Mumtaz! Gerbang "${chosenGate.text}" berhasil ditembus!`);
             GameStorage.addReward(35, 2, 'lughah', 5);
             onReward(35, 2);
           } else {
             sound.playGentleRetry();
             setHitFeedback('wrong');
+            setMascotMood('thinking');
+            setMascotComment(`Aduh! Jawaban yang benar adalah "${wave.targetArabic}".`);
           }
 
           setTimeout(() => {
             setHitFeedback(null);
-            if (waveIdx < RUNNER_WAVES.length - 1) {
+            if (waveIdx < SKY_RUNNER_WAVES.length - 1) {
               setWaveIdx(w => w + 1);
               setProgress(0);
+              setMascotMood('happy');
+              setMascotComment('Gelombang awan baru di depan!');
             } else {
-              setIsFinished(true);
+              setFlowState('VICTORY');
             }
-          }, 700);
+          }, 800);
 
           return 0;
         }
-        return prev + 3.8;
+        return prev + 3.4;
       });
     }, 100);
 
     return () => clearInterval(interval);
-  }, [waveIdx, currentLane, isFinished, isPaused, wave]);
+  }, [flowState, waveIdx, currentLane, isPaused, wave, onReward]);
 
   const moveLane = (dir: -1 | 1) => {
+    sound.playPop();
     setCurrentLane(prev => Math.max(0, Math.min(2, prev + dir)));
   };
 
-  const handleRestart = () => {
-    setWaveIdx(0);
-    setCurrentLane(1);
-    setProgress(0);
-    setScore(0);
-    setIsFinished(false);
-    setHitFeedback(null);
+  const handleSelectDirect = (idx: number) => {
+    sound.playPop();
+    setCurrentLane(idx);
+    sound.speakArabic(wave.lanes[idx].text);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="w-full max-w-lg bg-slate-900 text-white rounded-3xl shadow-2xl border-4 border-amber-400 overflow-hidden flex flex-col max-h-[94vh]"
-      >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 p-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Pasar Apung Mufradat (MFR)
+    <GameShell
+      title="Pelari Langit Arabi"
+      titleAr="فَارِسُ السَّمَاءِ العَرَبِيُّ"
+      islandName="Pulau Tamhid"
+      islandColor="from-amber-600 via-orange-600 to-amber-800"
+      gameIcon="🏃"
+      targetObjective="Kemudikan pelari cilik melintasi 3 gerbang awan dan pilih kata Arab yang cocok dengan cepat"
+      howToPlay={[
+        { icon: '☁️', text: 'Perhatikan kata target bahasa Indonesia yang muncul di atas langit.' },
+        { icon: '🎮', text: 'Tekan tombol arah kiri/kanan atau ketuk jalur untuk berpindah posisi.' },
+        { icon: '⚡', text: 'Tembus gerbang kata Arab yang tepat sebelum pelari mencapai ujung!' }
+      ]}
+      speechArabic="اِرْكُضْ فِي السَّمَاءِ وَاخْتَرْ كَلِمَاتِكَ!"
+      speechIntro="Mari berlari di atas awan melatih ketangkasan refleks bahasa Arab!"
+      flowState={flowState}
+      onStartGame={() => {
+        setFlowState('PLAYING');
+        setWaveIdx(0);
+        setCurrentLane(1);
+        setProgress(0);
+        setScore(0);
+        setHitFeedback(null);
+        sound.speakArabic(wave.targetArabic);
+      }}
+      onPlayAgain={() => {
+        setFlowState('PLAYING');
+        setWaveIdx(0);
+        setCurrentLane(1);
+        setProgress(0);
+        setScore(0);
+        setHitFeedback(null);
+      }}
+      onClose={onClose}
+      currentRound={waveIdx + 1}
+      totalRounds={SKY_RUNNER_WAVES.length}
+      score={score}
+      maxScore={SKY_RUNNER_WAVES.length}
+      starsEarned={score >= 4 ? 3 : score >= 2 ? 2 : 1}
+      xpEarned={score * 35}
+      mascotMood={mascotMood}
+      mascotComment={mascotComment}
+      mascotArabic={wave.targetArabic}
+      onPlayTitleAudio={() => sound.speakArabic(wave.targetArabic)}
+      victorySummary={[
+        { label: 'Gerbang Ditembus', value: `${score} / ${SKY_RUNNER_WAVES.length}` },
+        { label: 'Kecepatan Refleks', value: 'Kilat & Tepat' },
+        { label: 'Kosakata Terkuasai', value: 'Makanan, Warna, Fauna' },
+        { label: 'Skor Petualang', value: '⭐⭐⭐ Sempurna' }
+      ]}
+    >
+      {/* Target Question Banner */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-3 text-center shadow-xs mb-2">
+        <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider bg-amber-200/80 px-2 py-0.5 rounded-full inline-block mb-1">
+          {wave.category}
+        </span>
+        <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+          {wave.prompt}
+        </h3>
+        <p className="text-xs text-slate-500 italic mt-0.5">
+          {wave.subPrompt}
+        </p>
+      </div>
+
+      {/* 3D Runway Simulation Arena */}
+      <div className="relative h-60 sm:h-64 rounded-3xl overflow-hidden bg-gradient-to-b from-sky-400 via-indigo-600 to-slate-900 border-4 border-amber-400 shadow-inner flex flex-col justify-between p-3 select-none">
+        {/* Background Clouds */}
+        <div className="absolute top-2 left-6 text-3xl opacity-60">☁️</div>
+        <div className="absolute top-8 right-8 text-2xl opacity-60">☁️</div>
+
+        {/* Approaching Gates at Top */}
+        <div className="grid grid-cols-3 gap-2 relative z-10 pt-2">
+          {wave.lanes.map((lane, lIdx) => (
+            <motion.div
+              key={lIdx}
+              onClick={() => handleSelectDirect(lIdx)}
+              animate={{
+                scale: 0.85 + (progress / 100) * 0.25,
+                y: (progress / 100) * 45
+              }}
+              className={`p-2 rounded-2xl text-center border-2 transition-all cursor-pointer shadow-md flex flex-col items-center justify-center ${
+                currentLane === lIdx
+                  ? 'bg-amber-300 text-slate-950 border-white ring-4 ring-amber-400/50'
+                  : 'bg-white/85 hover:bg-white text-slate-800 border-white/60'
+              }`}
+            >
+              <span className="font-arabic text-xl sm:text-2xl font-black block leading-none">
+                {lane.text}
               </span>
-              <span className="text-xs bg-amber-300 text-slate-950 font-extrabold px-2 py-0.5 rounded-full">
-                Skor: {score}
+              <span className="text-[10px] font-sans text-slate-600 block mt-1">
+                {lane.meaning}
               </span>
-            </div>
-            <h3 className="font-chibi font-bold text-lg flex items-center gap-2 mt-1">
-              🚀 Sky Runner Arabi — Pelari Langit Mufradat
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center font-bold text-sm"
-          >
-            ✕
-          </button>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 flex-1 flex flex-col justify-between overflow-hidden">
-          {!isFinished ? (
-            <>
-              {/* Question Banner */}
-              <div className="bg-slate-800/90 rounded-2xl p-3 border border-amber-500/40 text-center mb-2 shadow-inner">
-                <span className="text-[10px] uppercase tracking-wider text-amber-300 font-bold block mb-1">
-                  Gelombang {waveIdx + 1} dari {RUNNER_WAVES.length} • {wave.category}
-                </span>
-                <h4 className="text-base font-bold text-white mb-0.5">
-                  {wave.prompt}
-                </h4>
-                <p className="text-[11px] text-slate-300">
-                  {wave.subPrompt}
-                </p>
-              </div>
-
-              {/* Runner Track Simulation (Perspective 3 Lanes) */}
-              <div className="relative flex-1 bg-gradient-to-b from-sky-950 via-slate-900 to-amber-950/40 rounded-2xl border border-white/10 overflow-hidden flex flex-col justify-between p-3 min-h-[220px]">
-                {/* Distance Progress Bar */}
-                <div className="w-full bg-slate-800 rounded-full h-2 mb-2 overflow-hidden border border-white/10">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-
-                {/* Approaching Gates in 3 Lanes */}
-                <div className="grid grid-cols-3 gap-2 my-auto">
-                  {wave.lanes.map((lane, i) => {
-                    const isSelectedLane = currentLane === i;
-                    const isHitting = progress > 85 && isSelectedLane;
-
-                    return (
-                      <div
-                        key={i}
-                        className={`relative rounded-2xl p-2.5 text-center flex flex-col items-center justify-center transition-all border-2 ${
-                          isSelectedLane
-                            ? 'border-amber-400 bg-amber-500/20 shadow-lg shadow-amber-500/20 scale-102 ring-2 ring-amber-300/50'
-                            : 'border-white/10 bg-white/5 opacity-70'
-                        } ${
-                          isHitting && hitFeedback === 'correct'
-                            ? 'bg-emerald-500/40 border-emerald-400 ring-4 ring-emerald-400'
-                            : ''
-                        } ${
-                          isHitting && hitFeedback === 'wrong'
-                            ? 'bg-rose-500/40 border-rose-400 ring-4 ring-rose-400'
-                            : ''
-                        }`}
-                      >
-                        <span className="text-[9px] text-slate-400 uppercase font-bold mb-1">
-                          {i === 0 ? 'Jalur Kiri' : i === 1 ? 'Jalur Tengah' : 'Jalur Kanan'}
-                        </span>
-
-                        <div className="font-arabic font-bold text-2xl text-amber-200 leading-tight">
-                          {lane.text}
-                        </div>
-
-                        {lane.translit && (
-                          <div className="text-[10px] text-slate-300 font-semibold mt-1">
-                            {lane.translit}
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sound.speakArabic(lane.text);
-                          }}
-                          className="mt-1 text-[9px] text-amber-300 hover:text-white flex items-center gap-1"
-                        >
-                          <Volume2 className="w-2.5 h-2.5" /> Lafal
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Flying Avatar / Magic Carpet at Bottom Lane Position */}
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {[0, 1, 2].map((idx) => (
-                    <div key={idx} className="flex justify-center items-center h-12">
-                      {currentLane === idx && (
-                        <motion.div
-                          layoutId="runner-avatar"
-                          className="flex flex-col items-center"
-                        >
-                          <span className="text-3xl filter drop-shadow-[0_4px_8px_rgba(245,158,11,0.5)]">
-                            🛶
-                          </span>
-                          <span className="text-[10px] bg-amber-400 text-slate-950 font-extrabold px-2 py-0.2 rounded-full mt-0.5">
-                            Kamu
-                          </span>
-                        </motion.div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Lane Controls */}
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <button
-                  onClick={() => moveLane(-1)}
-                  disabled={currentLane === 0}
-                  className="py-3.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/10 active:scale-95 transition-all text-sm"
-                >
-                  <ArrowLeft className="w-5 h-5 text-amber-400" /> Geser Kiri
-                </button>
-                <button
-                  onClick={() => moveLane(1)}
-                  disabled={currentLane === 2}
-                  className="py-3.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 rounded-2xl font-bold flex items-center justify-center gap-2 border border-white/10 active:scale-95 transition-all text-sm"
-                >
-                  Geser Kanan <ArrowRight className="w-5 h-5 text-amber-400" />
-                </button>
-              </div>
-            </>
-          ) : (
-            /* Finished Victory Card */
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
-              <div className="w-20 h-20 rounded-full bg-amber-400/20 text-amber-400 flex items-center justify-center mb-3 ring-4 ring-amber-400/40 animate-pulse">
-                <Award className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-bold font-chibi text-white">
-                Penerbangan Selesai!
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 max-w-sm">
-                Kamu telah menavigasi perahu melintasi gerbang-gerbang mufradat langit dengan gemilang.
-              </p>
-              <div className="flex items-center gap-4 mt-5 bg-slate-800 p-3 rounded-2xl border border-amber-400/30">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Skor Akhir</span>
-                  <span className="text-lg font-bold text-amber-400">{score} / {RUNNER_WAVES.length}</span>
-                </div>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Reward XP</span>
-                  <span className="text-lg font-bold text-emerald-400">+150 XP</span>
-                </div>
-              </div>
-              <div className="flex gap-2 w-full max-w-xs mt-6">
-                <button
-                  onClick={handleRestart}
-                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-white/20 flex items-center justify-center gap-1.5 text-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Ulangi
-                </button>
-                <button
-                  onClick={onClose}
-                  className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-extrabold rounded-2xl shadow-lg active:scale-95 transition-all text-xs"
-                >
-                  Selesai
-                </button>
-              </div>
-            </div>
-          )}
+        {/* 3-Lane Tracks Divider Lines */}
+        <div className="absolute inset-x-0 bottom-0 h-44 flex justify-around pointer-events-none opacity-30">
+          <div className="w-1 bg-white/40 h-full transform -skew-x-12" />
+          <div className="w-1 bg-white/40 h-full transform skew-x-12" />
         </div>
-      </motion.div>
-    </div>
+
+        {/* Player Runner Character at Bottom */}
+        <div className="grid grid-cols-3 gap-2 relative z-20 pb-2">
+          {[0, 1, 2].map(lIdx => (
+            <div key={lIdx} className="flex justify-center items-center h-16">
+              {currentLane === lIdx && (
+                <motion.div
+                  layoutId="runnerPlayer"
+                  className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 border-2 border-white shadow-xl flex items-center justify-center text-3xl"
+                >
+                  {hitFeedback === 'correct' ? '🎉' : hitFeedback === 'wrong' ? '💥' : '🏃'}
+                </motion.div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Approaching Distance Bar */}
+        <div className="absolute bottom-1 inset-x-4 h-1.5 bg-black/40 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-amber-400 transition-all duration-100"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Touch Steering Controls */}
+      <div className="pt-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => moveLane(-1)}
+          disabled={currentLane === 0}
+          className={`flex-1 py-3 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 border-2 transition-all ${
+            currentLane > 0
+              ? 'bg-slate-800 hover:bg-slate-700 text-white border-amber-400 shadow-md active:scale-95 cursor-pointer'
+              : 'bg-slate-200 text-slate-400 border-slate-300 opacity-50 cursor-not-allowed'
+          }`}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Geser Kiri</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => sound.speakArabic(wave.targetArabic)}
+          className="p-3 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 shadow-xs"
+          title="Dengarkan Lafal Target"
+        >
+          <Volume2 className="w-5 h-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => moveLane(1)}
+          disabled={currentLane === 2}
+          className={`flex-1 py-3 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 border-2 transition-all ${
+            currentLane < 2
+              ? 'bg-slate-800 hover:bg-slate-700 text-white border-amber-400 shadow-md active:scale-95 cursor-pointer'
+              : 'bg-slate-200 text-slate-400 border-slate-300 opacity-50 cursor-not-allowed'
+          }`}
+        >
+          <span>Geser Kanan</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </GameShell>
   );
 };

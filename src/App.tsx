@@ -3,6 +3,7 @@ import { UserProfile, IslandId } from './types/game';
 import { ISLANDS_DATA } from './data/curriculum';
 import { GameStorage } from './services/storage';
 import { sound } from './services/sound';
+import { DailyMissionsService } from './services/missions';
 import { TopHeader } from './components/TopHeader';
 import { Navigation, NavTab } from './components/Navigation';
 import { HomeView } from './components/HomeView';
@@ -42,6 +43,13 @@ import { PulauQawaidHubModal } from './components/PulauQawaidHubModal';
 import { PulauIstimaHubModal } from './components/PulauIstimaHubModal';
 import { PulauQiraahHubModal } from './components/PulauQiraahHubModal';
 import { PulauKalamHubModal } from './components/PulauKalamHubModal';
+import { PulauKitabahHubModal } from './components/PulauKitabahHubModal';
+import { PulauTamhidHubModal } from './components/PulauTamhidHubModal';
+import { IqraAdventureModal } from './components/IqraAdventureModal';
+import { DailyStreakModal } from './components/DailyStreakModal';
+import { DailyTaskTargetsModal } from './components/DailyTaskTargetsModal';
+import { DailyAdabModal } from './components/DailyAdabModal';
+import { ArabicGlossaryModal } from './components/ArabicGlossaryModal';
 
 export default function App() {
   const [profile, setProfile] = useState<UserProfile>(GameStorage.getProfile());
@@ -63,10 +71,26 @@ export default function App() {
   const [showPulauIstimaHub, setShowPulauIstimaHub] = useState(false);
   const [showPulauQiraahHub, setShowPulauQiraahHub] = useState(false);
   const [showPulauKalamHub, setShowPulauKalamHub] = useState(false);
+  const [showPulauKitabahHub, setShowPulauKitabahHub] = useState(false);
+  const [showPulauTamhidHub, setShowPulauTamhidHub] = useState(false);
+  const [showIqraModal, setShowIqraModal] = useState(false);
+  const [showDailyStreakModal, setShowDailyStreakModal] = useState(false);
+  const [showDailyTargetsModal, setShowDailyTargetsModal] = useState(false);
+  const [showDailyAdabModal, setShowDailyAdabModal] = useState(false);
+  const [showArabicGlossary, setShowArabicGlossary] = useState(false);
+  const [glossaryInitialTab, setGlossaryInitialTab] = useState<'difficult' | 'mastered' | 'all'>('difficult');
   const [floatingRewardToast, setFloatingRewardToast] = useState<{ xp: number; stars: number } | null>(null);
+
+  const handleOpenGlossary = (tab?: 'difficult' | 'mastered' | 'all') => {
+    setGlossaryInitialTab(tab || 'difficult');
+    setShowArabicGlossary(true);
+  };
 
   const handleReward = (xp: number, stars: number) => {
     setProfile(GameStorage.getProfile());
+    if (activeGame) {
+      DailyMissionsService.recordGameProgress(activeGame);
+    }
     setFloatingRewardToast({ xp, stars });
     setTimeout(() => setFloatingRewardToast(null), 2500);
   };
@@ -85,13 +109,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-800 flex justify-center items-start">
+    <div
+      className={`min-h-screen text-slate-800 flex justify-center items-start w-full transition-colors duration-300 ${
+        isMobileFrame
+          ? 'bg-slate-950 py-4 sm:py-6 px-2'
+          : 'bg-gradient-to-b from-amber-50/80 via-white to-teal-50/30'
+      }`}
+    >
       {/* Outer wrapper: Fullscreen or Simulated Android Smartphone Frame */}
       <div
-        className={`w-full transition-all duration-300 min-h-screen bg-amber-50/60 flex flex-col relative shadow-2xl ${
+        className={`w-full transition-all duration-300 min-h-screen flex flex-col relative ${
           isMobileFrame
-            ? 'max-w-[440px] my-4 rounded-[42px] border-[10px] border-slate-800 overflow-hidden min-h-[92vh] ring-8 ring-slate-900/40'
-            : 'max-w-4xl'
+            ? 'max-w-[440px] rounded-[42px] border-[10px] border-slate-800 overflow-hidden min-h-[92vh] ring-8 ring-slate-900/40 bg-amber-50/70 shadow-2xl my-auto'
+            : 'w-full bg-transparent shadow-none'
         }`}
       >
         {/* Android status bar notch indicator in Mobile Frame mode */}
@@ -114,6 +144,13 @@ export default function App() {
           onOpenParentDashboard={() => setShowParentDashboard(true)}
           onOpenCompanionRoom={() => setShowCompanionRoom(true)}
           onChangeAudience={handleChangeAudience}
+          onOpenDailyStreak={() => setShowDailyStreakModal(true)}
+          onOpenDailyTargets={() => setShowDailyTargetsModal(true)}
+          onOpenDailyAdab={() => setShowDailyAdabModal(true)}
+          onOpenIqra={() => setShowIqraModal(true)}
+          onOpenGlossary={() => handleOpenGlossary('difficult')}
+          currentTab={currentTab}
+          onNavigateTab={setCurrentTab}
         />
 
         {/* Main Tab View Routing */}
@@ -127,6 +164,12 @@ export default function App() {
               onOpenCompanionRoom={() => setShowCompanionRoom(true)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}
               onOpenRealWorldMissions={() => setShowRealWorldMissions(true)}
+              onReward={handleReward}
+              onOpenIqra={() => setShowIqraModal(true)}
+              onOpenDailyStreak={() => setShowDailyStreakModal(true)}
+              onOpenDailyTargets={() => setShowDailyTargetsModal(true)}
+              onOpenDailyAdab={() => setShowDailyAdabModal(true)}
+              onOpenGlossary={() => handleOpenGlossary('difficult')}
             />
           )}
 
@@ -136,10 +179,11 @@ export default function App() {
               onReward={handleReward}
               onLaunchGame={(gameId) => setActiveGame(gameId)}
               onOpenParentDashboard={() => setShowParentDashboard(true)}
+              onOpenIqra={() => setShowIqraModal(true)}
             />
           )}
 
-          {currentTab === 'world' && (
+          <div className={currentTab === 'world' ? 'block' : 'hidden'}>
             <WorldMapView
               profile={profile}
               onLaunchGame={(gameId) => setActiveGame(gameId)}
@@ -151,8 +195,10 @@ export default function App() {
               onOpenPulauIstimaHub={() => setShowPulauIstimaHub(true)}
               onOpenPulauQiraahHub={() => setShowPulauQiraahHub(true)}
               onOpenPulauKalamHub={() => setShowPulauKalamHub(true)}
+              onOpenPulauKitabahHub={() => setShowPulauKitabahHub(true)}
+              onOpenPulauTamhidHub={() => setShowPulauTamhidHub(true)}
             />
-          )}
+          </div>
 
           {currentTab === 'games' && (
             <GamesCenterView
@@ -169,6 +215,9 @@ export default function App() {
               onOpenParentDashboard={() => setShowParentDashboard(true)}
               onOpenCompanionRoom={() => setShowCompanionRoom(true)}
               onChangeAudience={handleChangeAudience}
+              onLaunchGame={(gameId) => setActiveGame(gameId)}
+              onNavigateLearn={() => setCurrentTab('learn')}
+              onOpenGlossary={handleOpenGlossary}
             />
           )}
         </main>
@@ -207,6 +256,7 @@ export default function App() {
             onPracticeDifficultWords={() => {
               setCurrentTab('learn');
             }}
+            onOpenGlossary={() => handleOpenGlossary('difficult')}
           />
         )}
 
@@ -241,6 +291,63 @@ export default function App() {
               setShowPulauHurufHub(false);
               setActiveGame(gameId);
             }}
+            onReward={handleReward}
+            onOpenIqra={() => {
+              setShowPulauHurufHub(false);
+              setShowIqraModal(true);
+            }}
+          />
+        )}
+
+        {/* QUR'AN LEARNING ADVENTURE & IQRA PLATFORM MODAL */}
+        {showIqraModal && (
+          <IqraAdventureModal
+            profile={profile}
+            onClose={() => setShowIqraModal(false)}
+            onReward={handleReward}
+          />
+        )}
+
+        {/* DAILY STREAK (ISTIQAMAH) MODAL */}
+        {showDailyStreakModal && (
+          <DailyStreakModal
+            profile={profile}
+            onClose={() => setShowDailyStreakModal(false)}
+            onUpdateProfile={(p) => setProfile(p)}
+            onReward={handleReward}
+          />
+        )}
+
+        {/* DAILY TASK TARGETS (4 PILAR TARGET HARIAN) MODAL */}
+        {showDailyTargetsModal && (
+          <DailyTaskTargetsModal
+            profile={profile}
+            onClose={() => setShowDailyTargetsModal(false)}
+            onOpenIqra={() => setShowIqraModal(true)}
+            onOpenGames={() => setCurrentTab('games')}
+            onOpenAdab={() => setShowDailyAdabModal(true)}
+            onUpdateProfile={(p) => setProfile(p)}
+            onReward={handleReward}
+          />
+        )}
+
+        {/* DAILY ADAB & ISLAMIC CHARACTER QUEST MODAL */}
+        {showDailyAdabModal && (
+          <DailyAdabModal
+            profile={profile}
+            onClose={() => setShowDailyAdabModal(false)}
+            onUpdateProfile={(p) => setProfile(p)}
+            onReward={handleReward}
+          />
+        )}
+
+        {/* ARABIC GLOSSARY & BUKU KATA SULIT MODAL (USER REQUEST #8) */}
+        {showArabicGlossary && (
+          <ArabicGlossaryModal
+            profile={profile}
+            initialTab={glossaryInitialTab}
+            onClose={() => setShowArabicGlossary(false)}
+            onUpdateProfile={(p) => setProfile(p)}
             onReward={handleReward}
           />
         )}
@@ -318,6 +425,35 @@ export default function App() {
               setActiveGame(gameId);
             }}
             onReward={handleReward}
+          />
+        )}
+
+        {showPulauKitabahHub && (
+          <PulauKitabahHubModal
+            island={ISLANDS_DATA.find(i => i.id === 'KTB') || ISLANDS_DATA[6]}
+            profile={profile}
+            onClose={() => setShowPulauKitabahHub(false)}
+            onLaunchGame={(gameId) => {
+              setShowPulauKitabahHub(false);
+              setActiveGame(gameId);
+            }}
+            onReward={handleReward}
+          />
+        )}
+
+        {showPulauTamhidHub && (
+          <PulauTamhidHubModal
+            island={ISLANDS_DATA.find(i => i.id === 'TMH') || ISLANDS_DATA[8]}
+            profile={profile}
+            onClose={() => setShowPulauTamhidHub(false)}
+            onLaunchGame={(gameId) => {
+              setShowPulauTamhidHub(false);
+              setActiveGame(gameId);
+            }}
+            onReward={handleReward}
+            onPromote={() => {
+              setProfile(GameStorage.getProfile());
+            }}
           />
         )}
 
@@ -422,6 +558,13 @@ export default function App() {
 
         {activeGame === 'imla_lighthouse' && (
           <ImlaLighthouseGame
+            onClose={() => setActiveGame(null)}
+            onReward={handleReward}
+          />
+        )}
+
+        {activeGame === 'hudhud_letter' && (
+          <HudhudLetterModal
             onClose={() => setActiveGame(null)}
             onReward={handleReward}
           />
