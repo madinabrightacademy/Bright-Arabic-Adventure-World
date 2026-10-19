@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, IslandId } from './types/game';
+import { UserProfile, IslandId, RutbahType, HudhudStage } from './types/game';
 import { ISLANDS_DATA } from './data/curriculum';
 import { GameStorage } from './services/storage';
 import { sound } from './services/sound';
@@ -170,6 +170,7 @@ export default function App() {
               onOpenDailyTargets={() => setShowDailyTargetsModal(true)}
               onOpenDailyAdab={() => setShowDailyAdabModal(true)}
               onOpenGlossary={() => handleOpenGlossary('difficult')}
+              onUpdateProfile={(p) => setProfile(p)}
             />
           )}
 
@@ -575,7 +576,18 @@ export default function App() {
             onClose={() => setActiveGame(null)}
             onReward={handleReward}
             onPromote={() => {
-              setProfile(GameStorage.getProfile());
+              const rutbahLadder: RutbahType[] = ['Musafir', 'Thalib', 'Rahhal', 'Qari', 'Katib', 'Adib'];
+              const currentIdx = rutbahLadder.indexOf(profile.rutbah);
+              if (currentIdx < rutbahLadder.length - 1) {
+                const nextRutbah = rutbahLadder[currentIdx + 1];
+                const nextLevel = currentIdx + 1;
+                const nextStage: HudhudStage = nextLevel >= 4 ? 'Scribe' : nextLevel >= 2 ? 'Explorer' : 'Baby';
+                const updated = GameStorage.promoteRutbah(nextRutbah, nextLevel, nextStage);
+                setProfile(updated);
+                sound.playFanfare();
+              } else {
+                setProfile(GameStorage.getProfile());
+              }
             }}
           />
         )}

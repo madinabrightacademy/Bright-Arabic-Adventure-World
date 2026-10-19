@@ -25,7 +25,7 @@ export const IST_DEDICATED_PEDAGOGY: Record<string, EnrichedSkillPedagogy> = {
         {
           title: 'Ketajaman Tiga Vokal Murni',
           explanation: 'Fathah berbunyi "A" murni (bukan E/O), Kasrah berbunyi "I" jernih (bukan E), dan Dhommah berbunyi "U" bundar (bukan O).',
-          exampleAr: 'بَ - بِ - بُ ⟷ تRunningَ - تِ - تُ',
+          exampleAr: 'بَ - بِ - بُ ⟷ تَ - تِ - تُ',
           exampleTranslit: 'Ba - Bi - Bu | Ta - Ti - Tu',
           exampleId: 'Vokal murni vokal tunggal'
         },

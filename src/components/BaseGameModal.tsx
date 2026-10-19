@@ -137,6 +137,30 @@ export const BaseGameModal: React.FC<BaseGameModalProps> = ({
   const activeMascotMood = controlledMascotMood !== undefined ? controlledMascotMood : internalMascotMood;
   const activeMascotComment = controlledMascotComment !== undefined ? controlledMascotComment : internalMascotComment;
 
+  // Accessibility: Lock background scroll and handle Escape key
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showExitConfirm) {
+          setShowExitConfirm(false);
+        } else if (activeFlowState === 'PLAYING') {
+          setShowExitConfirm(true);
+        } else {
+          onClose();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [activeFlowState, showExitConfirm, onClose]);
+
   // Calculate stars: if explicitStars is provided use it, else calculate from score / maxScore
   const computedStars = explicitStars !== undefined
     ? explicitStars
@@ -213,7 +237,12 @@ export const BaseGameModal: React.FC<BaseGameModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="base-game-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+    >
       <motion.div
         initial={{ scale: 0.94, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -243,17 +272,18 @@ export const BaseGameModal: React.FC<BaseGameModalProps> = ({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <h2 className="text-sm sm:text-base font-black truncate font-chibi text-white drop-shadow-xs">
+                  <h2 id="base-game-title" className="text-sm sm:text-base font-black truncate font-chibi text-white drop-shadow-xs">
                     {title}
                   </h2>
                   {titleAr && (
                     <button
                       type="button"
                       onClick={handleTitleAudio}
-                      className="p-1 rounded-full bg-white/15 hover:bg-white/25 text-amber-200 transition-colors shrink-0"
+                      aria-label={`Dengarkan pelafalan ${titleAr}`}
+                      className="p-1 rounded-full bg-white/15 hover:bg-white/25 text-amber-200 transition-colors shrink-0 cursor-pointer"
                       title="Dengarkan pengucapan Arab"
                     >
-                      <Volume2 className="w-3.5 h-3.5" />
+                      <Volume2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -277,10 +307,11 @@ export const BaseGameModal: React.FC<BaseGameModalProps> = ({
                     onClose();
                   }
                 }}
-                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Tutup Game"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
                 title="Tutup Game"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>

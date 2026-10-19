@@ -41,6 +41,7 @@ interface HomeViewProps {
   onOpenDailyTargets?: () => void;
   onOpenDailyAdab?: () => void;
   onOpenGlossary?: () => void;
+  onUpdateProfile?: (p: UserProfile) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -56,13 +57,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenDailyStreak,
   onOpenDailyTargets,
   onOpenDailyAdab,
-  onOpenGlossary
+  onOpenGlossary,
+  onUpdateProfile
 }) => {
   const [selectedBadgeModal, setSelectedBadgeModal] = useState<AchievementItem | null>(null);
   const [activeMascot, setActiveMascot] = useState<MascotType>(
     profile.avatar === 'aira' ? 'amira' : 'zaki'
   );
-  const [chestClaimed, setChestClaimed] = useState(false);
+  
+  // Persisted in GameStorage so switching tabs does not reset chest status
+  const isChestAlreadyClaimed = GameStorage.isDailyChestClaimed();
 
   // Today's 4-Step Adventure Journey (Parroto / Duolingo clear step-by-step game progression)
   const dailyJourneySteps = [
@@ -97,7 +101,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       icon: '🎧',
       gameId: 'echo_cave',
       reward: '+50 XP • ⭐ 2',
-      isCompleted: false,
+      isCompleted: (profile.hudhudTraits.sam || 0) >= 10,
       color: 'from-teal-400 to-emerald-500',
       borderColor: 'border-teal-400',
       badgeBg: 'bg-teal-100 text-teal-900'
@@ -109,7 +113,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       icon: '🎁',
       gameId: 'chest',
       reward: '+100 XP • ⭐ 3',
-      isCompleted: chestClaimed,
+      isCompleted: isChestAlreadyClaimed,
       color: 'from-purple-500 to-indigo-600',
       borderColor: 'border-purple-400',
       badgeBg: 'bg-purple-100 text-purple-900'
@@ -121,11 +125,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const activeStep = currentStepIndex !== -1 ? dailyJourneySteps[currentStepIndex] : dailyJourneySteps[3];
 
   const handleClaimChest = () => {
-    if (chestClaimed) return;
-    sound.playFanfare();
-    setChestClaimed(true);
-    if (onReward) {
-      onReward(100, 3);
+    if (isChestAlreadyClaimed) return;
+    const res = GameStorage.claimDailyChest();
+    if (res.success) {
+      sound.playFanfare();
+      sound.playSparkle();
+      if (onReward) {
+        onReward(res.xp, res.stars);
+      }
+      if (onUpdateProfile) {
+        onUpdateProfile(res.profile);
+      }
     }
   };
 
@@ -239,15 +249,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <button
                   type="button"
                   onClick={handleClaimChest}
-                  disabled={chestClaimed}
+                  disabled={isChestAlreadyClaimed}
                   className={`py-3 px-6 rounded-2xl font-black text-sm shadow-xl flex items-center gap-2 border-b-4 transition-all cursor-pointer active:translate-y-1 active:border-b-0 ${
-                    chestClaimed
+                    isChestAlreadyClaimed
                       ? 'bg-slate-400 border-slate-600 text-slate-800'
                       : 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-amber-600 text-slate-950'
                   }`}
                 >
                   <Gift className="w-5 h-5" />
-                  <span>{chestClaimed ? 'Peti Harian Sudah Diklaim ✨' : 'Buka Peti Emas Sekarang (+100 XP) 🎁'}</span>
+                  <span>{isChestAlreadyClaimed ? 'Peti Harian Sudah Diklaim ✨' : 'Buka Peti Emas Sekarang (+100 XP) 🎁'}</span>
                 </button>
               ) : (
                 <button

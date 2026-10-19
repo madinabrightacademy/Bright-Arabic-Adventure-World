@@ -113,8 +113,6 @@ export const BasketSpellGame: React.FC<BasketSpellProps> = ({ onClose, onReward 
         setScore(s => s + 1);
         setMascotMood('celebrate');
         setMascotComment(`Mumtaz! Kata "${word.name_ar}" berhasil dieja rapi ke keranjang!`);
-        GameStorage.addReward(35, 1, 'lughah', 6);
-        onReward(35, 1);
 
         setTimeout(() => {
           if (wordIdx < ALL_SPELL_WORDS.length - 1) {
@@ -174,6 +172,9 @@ export const BasketSpellGame: React.FC<BasketSpellProps> = ({ onClose, onReward 
         setupRound(0);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lughah"
+      traitPoints={6}
       currentRound={wordIdx + 1}
       totalRounds={ALL_SPELL_WORDS.length}
       score={score}

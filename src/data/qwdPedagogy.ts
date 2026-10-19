@@ -59,7 +59,8 @@ export const QWD_DEDICATED_PEDAGOGY: Record<string, EnrichedSkillPedagogy> = {
         options: [
           { text: 'كِتَابٌ، قَلَمٌ، المَسْجِدُ (bertanwin dan ber-Alif Lam)', isCorrect: true, feedback: 'Mumtaz! Tanwin dan Alif Lam adalah tanda paten isim.' },
           { text: 'ذَهَبَ، يَكْتُبُ، اِقْرَأْ', isCorrect: false, feedback: 'Ini semua adalah fi\'il (kata kerja lampau, sekarang, perintah).' },
-          { text: 'فِي، مِنْ排除، عَلَى', isCorrect: false, feedback: 'Ini adalah kelompok huruf jar/partikel.' }
+          { text: 'فِي، مِنْ، عَلَى', isCorrect: false, feedback: 'Ini adalah kelompok huruf jar/partikel.' },
+          { text: 'يَأْكُلُ، يَشْرَبُ، نَامَ', isCorrect: false, feedback: 'Ini adalah kelompok fi\'il (kata kerja aktivitas fisik).' }
         ]
       },
       {

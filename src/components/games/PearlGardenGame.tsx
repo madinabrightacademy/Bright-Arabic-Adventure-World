@@ -181,8 +181,6 @@ export const PearlGardenGame: React.FC<PearlGardenProps> = ({ onClose, onReward 
           setMatchedCount(newMatched);
 
           if (newMatched >= stageConfig.pairs.length) {
-            GameStorage.addReward(50, 2, 'qiraah', 8);
-            onReward(50, 2);
             setTimeout(() => {
               setFlowState('VICTORY');
             }, 1000);
@@ -228,6 +226,9 @@ export const PearlGardenGame: React.FC<PearlGardenProps> = ({ onClose, onReward 
         initGame(activeStage);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="qiraah"
+      traitPoints={8}
       currentRound={matchedCount + 1}
       totalRounds={stageConfig.pairs.length}
       score={matchedCount}

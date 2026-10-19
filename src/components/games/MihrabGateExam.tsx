@@ -94,8 +94,6 @@ export const MihrabGateExam: React.FC<MihrabGateProps> = ({ onClose, onReward, o
       setScore(s => s + 1);
       setMascotMood('celebrate');
       setMascotComment('Mumtaz! Jawaban pilar ujianmu tepat dan benar!');
-      GameStorage.addReward(50, 2, 'lughah', 8);
-      onReward(50, 2);
     } else {
       sound.playGentleRetry();
       setMascotMood('thinking');
@@ -112,10 +110,23 @@ export const MihrabGateExam: React.FC<MihrabGateProps> = ({ onClose, onReward, o
       setMascotMood('happy');
       setMascotComment('Pilar kecakapan berikutnya!');
     } else {
-      onPromote();
+      // 75% passing threshold required for rank promotion (minimum 3 of 4 correct)
+      const passed = score >= 3;
+      if (passed) {
+        sound.playFanfare();
+        onPromote();
+        setMascotMood('celebrate');
+        setMascotComment('Alhamdulillah! Engkau lulus ujian 4 pilar (≥ 75%) dan berhak naik jenjang!');
+      } else {
+        sound.playGentleRetry();
+        setMascotMood('thinking');
+        setMascotComment('Belum mencapai ambang 75% (butuh minimal 3 pilar benar). Ulangi lagi untuk mengokohkan 4 pilar!');
+      }
       setFlowState('VICTORY');
     }
   };
+
+  const isExamPassed = score >= 3;
 
   return (
     <GameShell
@@ -124,11 +135,11 @@ export const MihrabGateExam: React.FC<MihrabGateProps> = ({ onClose, onReward, o
       islandName="Gerbang Mihrab"
       islandColor="from-amber-600 via-yellow-600 to-amber-800"
       gameIcon="⛩️"
-      targetObjective="Tuntaskan 4 pilar evaluasi komprehensif (Istima', Kalam, Qira'ah, Kitabah) untuk kenaikan jenjang petualang"
+      targetObjective="Tuntaskan 4 pilar evaluasi komprehensif (Istima', Kalam, Qira'ah, Kitabah) dengan skor minimal 75% untuk kenaikan jenjang petualang"
       howToPlay={[
         { icon: '🏛️', text: 'Selesaikan 4 pilar ujian: Menyimak, Berbicara, Membaca, dan Menulis.' },
         { icon: '🌟', text: 'Pilih jawaban yang paling tepat sesuai kaidah fusha.' },
-        { icon: '👑', text: 'Raih kelulusan untuk membuka kenaikan tingkat petualang!' }
+        { icon: '👑', text: 'Raih minimal 3 dari 4 jawaban benar (75%) untuk membuka kenaikan tingkat petualang!' }
       ]}
       speechArabic="بَارَكَ اللَّهُ فِيكُمْ، بَوَّابَةُ المِحْرَابِ مَفْتُوحَةٌ!"
       speechIntro="Selamat datang di Gerbang Kelulusan Mihrab Kepulauan Bahasa Arab!"
@@ -155,17 +166,17 @@ export const MihrabGateExam: React.FC<MihrabGateProps> = ({ onClose, onReward, o
       totalRounds={EXAM_QUESTIONS.length}
       score={score}
       maxScore={EXAM_QUESTIONS.length}
-      starsEarned={score >= 3 ? 3 : score >= 2 ? 2 : 1}
-      xpEarned={score * 50}
+      starsEarned={isExamPassed ? 3 : 0}
+      xpEarned={isExamPassed ? 150 : score * 15}
       mascotMood={mascotMood}
       mascotComment={mascotComment}
       mascotArabic="مِحْرَابٌ"
       onPlayTitleAudio={() => handlePlayAudio('مِحْرَابٌ')}
       victorySummary={[
-        { label: 'Hasil Ujian', value: `${score} / ${EXAM_QUESTIONS.length} Pilar Tuntas` },
-        { label: 'Status Kelulusan', value: score >= 3 ? 'Lulus Mumtaz' : 'Lulus Baik' },
-        { label: 'Gelar Petualang', value: '👑 Rahhal Cilik' },
-        { label: 'Tingkat Baru', value: 'Level 1 Terbuka' }
+        { label: 'Hasil Ujian', value: `${score} / ${EXAM_QUESTIONS.length} Pilar (${Math.round((score / EXAM_QUESTIONS.length) * 100)}%)` },
+        { label: 'Status Kelulusan', value: isExamPassed ? 'LULUS (Ambang ≥ 75% Tercapai)' : 'BELUM LULUS (Perlu Minimal 3 Benar)' },
+        { label: 'Gelar Petualang', value: isExamPassed ? '👑 Kenaikan Jenjang Terbuka' : '🔒 Membutuhkan Skor ≥ 75%' },
+        { label: 'Rekomendasi', value: isExamPassed ? 'Siap Berlayar ke Tingkat Lanjut' : 'Latih kembali pilar yang belum tuntas di pulau terkait!' }
       ]}
     >
       {/* Question Skill Label */}

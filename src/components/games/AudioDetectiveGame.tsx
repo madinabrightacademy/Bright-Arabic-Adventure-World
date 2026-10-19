@@ -187,8 +187,6 @@ export const AudioDetectiveGame: React.FC<AudioDetectiveProps> = ({ onClose, onR
       setScore(s => s + 1);
       setMascotMood('celebrate');
       setMascotComment('Mumtaz! Analisis detektifmu sangat akurat memecahkan misteri!');
-      GameStorage.addReward(50, 2, 'sam', 8);
-      onReward(50, 2);
     } else {
       sound.playGentleRetry();
       setMascotMood('thinking');

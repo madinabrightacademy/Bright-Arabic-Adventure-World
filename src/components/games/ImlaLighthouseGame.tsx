@@ -105,8 +105,6 @@ export const ImlaLighthouseGame: React.FC<ImlaLighthouseProps> = ({ onClose, onR
       setScore(s => s + 1);
       setMascotMood('celebrate');
       setMascotComment(`Mumtaz! Rasm ejaan "${q.wordToDictate}" tepat menyalakan mercusuar!`);
-      GameStorage.addReward(40, 2, 'kitabah', 7);
-      onReward(40, 2);
     } else {
       sound.playGentleRetry();
       setMascotMood('thinking');

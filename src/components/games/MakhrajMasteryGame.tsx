@@ -109,9 +109,6 @@ export const MakhrajMasteryGame: React.FC<MakhrajMasteryGameProps> = ({ onClose,
       setTestedCount(c => c + 1);
       setMascotMood('celebrate');
       setMascotComment(`Mumtaz! Artikulasi makhraj "${activeChallenge.focusLetters.join(' & ')}" sangat fasih!`);
-
-      GameStorage.addReward(50, 2, 'lisan', 8);
-      onReward(50, 2);
     }, 2200);
   };
 
@@ -157,6 +154,9 @@ export const MakhrajMasteryGame: React.FC<MakhrajMasteryGameProps> = ({ onClose,
         setVoiceEvaluated(false);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lisan"
+      traitPoints={15}
       currentRound={stageIdx + 1}
       totalRounds={CHALLENGES.length}
       score={testedCount}

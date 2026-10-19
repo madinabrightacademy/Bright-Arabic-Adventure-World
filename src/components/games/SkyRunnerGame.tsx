@@ -111,8 +111,6 @@ export const SkyRunnerGame: React.FC<SkyRunnerProps> = ({ onClose, onReward }) =
             setScore(s => s + 1);
             setMascotMood('celebrate');
             setMascotComment(`Mumtaz! Gerbang "${chosenGate.text}" berhasil ditembus!`);
-            GameStorage.addReward(35, 2, 'lughah', 5);
-            onReward(35, 2);
           } else {
             sound.playGentleRetry();
             setHitFeedback('wrong');
@@ -186,6 +184,9 @@ export const SkyRunnerGame: React.FC<SkyRunnerProps> = ({ onClose, onReward }) =
         setHitFeedback(null);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lughah"
+      traitPoints={10}
       currentRound={waveIdx + 1}
       totalRounds={SKY_RUNNER_WAVES.length}
       score={score}

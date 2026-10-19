@@ -11,10 +11,10 @@ export const DEFAULT_PROFILE: UserProfile = {
   audience: 'child',
   level: 0,
   rutbah: 'Musafir',
-  xp: 320,
-  stars: 12,
+  xp: 0,
+  stars: 0,
   crystals: {
-    HRF: true,
+    HRF: false,
     MFR: false,
     HWR: false,
     QWD: false,
@@ -25,21 +25,21 @@ export const DEFAULT_PROFILE: UserProfile = {
     TMH: false
   },
   hudhudStage: 'Egg',
-  hudhudEggCracks: 1, // Ready to hatch soon!
+  hudhudEggCracks: 0,
   hudhudTraits: {
-    lisan: 15,
-    sam: 20,
-    qiraah: 25,
-    kitabah: 10,
-    lughah: 20
+    lisan: 0,
+    sam: 0,
+    qiraah: 0,
+    kitabah: 0,
+    lughah: 0
   },
-  dailyStreak: 3,
+  dailyStreak: 1,
   lastActiveDate: new Date().toISOString().split('T')[0],
-  skillsMastered: ['HRF-L0-01', 'MFR-L0-01'],
-  wordsMastered: ['lx_alif', 'lx_baa', 'lx_wahid'],
-  difficultWords: ['lx_tsaa', 'lx_asyarah'],
-  companionRoomDecorations: ['lampu_maroko', 'karpet_emas'],
-  achievements: ['ach_first_island']
+  skillsMastered: [],
+  wordsMastered: [],
+  difficultWords: [],
+  companionRoomDecorations: [],
+  achievements: []
 };
 
 export class GameStorage {
@@ -63,19 +63,38 @@ export class GameStorage {
     }
   }
 
-  public static addReward(xpDelta: number, starsDelta: number, trait?: keyof CompanionTraits, traitDelta: number = 5): UserProfile {
+  public static addReward(rawXpDelta: number, starsDelta: number, trait?: keyof CompanionTraits, traitDelta: number = 5): UserProfile {
     const profile = this.getProfile();
-    profile.xp += xpDelta;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Enforce daily XP cap to stop runaway farming (350 XP per day at 100%, 10% thereafter)
+    if (profile.dailyXpDate !== today) {
+      profile.dailyXpDate = today;
+      profile.dailyXpAccumulated = 0;
+    }
+
+    const currentDaily = profile.dailyXpAccumulated || 0;
+    let actualXpDelta = rawXpDelta;
+    if (currentDaily >= 350) {
+      actualXpDelta = Math.max(1, Math.round(rawXpDelta * 0.1));
+    } else if (currentDaily + rawXpDelta > 350) {
+      const fullPart = 350 - currentDaily;
+      const reducedPart = Math.round((rawXpDelta - fullPart) * 0.1);
+      actualXpDelta = fullPart + reducedPart;
+    }
+
+    profile.dailyXpAccumulated = currentDaily + actualXpDelta;
+    profile.xp += actualXpDelta;
     profile.stars += starsDelta;
 
     if (trait) {
       profile.hudhudTraits[trait] = Math.min(100, (profile.hudhudTraits[trait] || 0) + traitDelta);
     }
 
-    // Check Egg hatching
+    // Check Egg hatching milestone at 150+ XP with 3 cracks
     if (profile.hudhudStage === 'Egg') {
       profile.hudhudEggCracks = Math.min(3, profile.hudhudEggCracks + 1);
-      if (profile.hudhudEggCracks >= 3 && profile.xp >= 350) {
+      if (profile.hudhudEggCracks >= 3 && profile.xp >= 150) {
         profile.hudhudStage = 'Baby';
       }
     }
@@ -83,6 +102,26 @@ export class GameStorage {
     this.saveProfile(profile);
     this.updateLeaderboardForUser(profile);
     return profile;
+  }
+
+  public static isDailyChestClaimed(): boolean {
+    const profile = this.getProfile();
+    const today = new Date().toISOString().split('T')[0];
+    return profile.lastDailyChestClaimDate === today;
+  }
+
+  public static claimDailyChest(): { success: boolean; profile: UserProfile; xp: number; stars: number } {
+    const profile = this.getProfile();
+    const today = new Date().toISOString().split('T')[0];
+    if (profile.lastDailyChestClaimDate === today) {
+      return { success: false, profile, xp: 0, stars: 0 };
+    }
+    profile.lastDailyChestClaimDate = today;
+    profile.xp += 100;
+    profile.stars += 3;
+    this.saveProfile(profile);
+    this.updateLeaderboardForUser(profile);
+    return { success: true, profile, xp: 100, stars: 3 };
   }
 
   public static unlockCrystal(islandId: IslandId): UserProfile {

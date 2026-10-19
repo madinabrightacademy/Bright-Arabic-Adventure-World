@@ -150,8 +150,6 @@ export const EchoCaveGame: React.FC<EchoCaveProps> = ({ onClose, onReward }) => 
       setScore(s => s + 1);
       setMascotMood('celebrate');
       setMascotComment(`Mumtaz! Telingamu tajam membedakan gema "${q.ar_sound}"!`);
-      GameStorage.addReward(40, 2, 'sam', 7);
-      onReward(40, 2);
     } else {
       sound.playGentleRetry();
       setMascotMood('thinking');

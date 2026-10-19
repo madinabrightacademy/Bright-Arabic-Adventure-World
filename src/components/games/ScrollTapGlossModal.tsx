@@ -33,16 +33,13 @@ export const ScrollTapGlossModal: React.FC<ScrollTapGlossProps> = ({ onClose, on
     sound.playSparkle();
     if (!savedWords.includes(word.ar)) {
       setSavedWords(prev => [...prev, word.ar]);
-      GameStorage.addReward(20, 1, 'qiraah', 4);
-      onReward(20, 1);
+      setMascotComment(`Tersimpan: "${word.ar}" (${word.mean})`);
     }
   };
 
   const handleCompleteStory = () => {
     sound.playSuccess();
     setMascotMood('celebrate');
-    GameStorage.addReward(70, 3, 'qiraah', 10);
-    onReward(70, 3);
     setFlowState('VICTORY');
   };
 
@@ -73,6 +70,9 @@ export const ScrollTapGlossModal: React.FC<ScrollTapGlossProps> = ({ onClose, on
         setSavedWords([]);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="qiraah"
+      traitPoints={10}
       currentRound={selectedStoryIdx + 1}
       totalRounds={GRADED_READINGS.length}
       score={savedWords.length + 1}

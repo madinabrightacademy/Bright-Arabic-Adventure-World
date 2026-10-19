@@ -95,8 +95,6 @@ export const TashrifLabGame: React.FC<TashrifLabProps> = ({ onClose, onReward })
     if (!testedPronouns.includes(item.pronoun)) {
       const next = [...testedPronouns, item.pronoun];
       setTestedPronouns(next);
-      GameStorage.addReward(35, 1, 'lughah', 5);
-      onReward(35, 1);
 
       if (next.length >= activeRoot.conjugations.length) {
         sound.playSuccess();
@@ -135,6 +133,9 @@ export const TashrifLabGame: React.FC<TashrifLabProps> = ({ onClose, onReward })
         setTestedPronouns([]);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lughah"
+      traitPoints={10}
       currentRound={testedPronouns.length + 1}
       totalRounds={activeRoot.conjugations.length}
       score={testedPronouns.length}

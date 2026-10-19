@@ -3016,11 +3016,13 @@ export function getSkillPedagogy(skillOrId: SkillItem | string): EnrichedSkillPe
     },
     questions: questions.length > 0 ? questions : [
       {
-        id: 'def_q1',
-        question: `Apakah materi "${skill.name}" telah kamu pahami dengan baik?`,
+        id: `ped_${skill.skill_id.toLowerCase().replace(/[^a-z0-9]/g, '_')}_q1`,
+        question: `Apakah fokus utama dari penguasaan materi "${skill.name}"?`,
         options: [
-          { text: 'Sudah paham, siap melanjutkan!', isCorrect: true, feedback: 'Mumtaz! Terus pertahankan semangat belajarmu!' },
-          { text: 'Perlu sedikit mengulang materi', isCorrect: true, feedback: 'Bagus! Mengulang adalah kunci hafalan kokoh.' }
+          { text: `Menguasai kaidah dan penerapan materi ${skill.name} secara fasih`, isCorrect: true, feedback: 'Mumtaz! Inilah sasaran utama pembelajaran modul ini.' },
+          { text: 'Menghafal tanpa memahami kaidah dan ketepatan lafal', isCorrect: false, feedback: 'Bahasa Arab menuntut pemahaman makna serta ketepatan lafal murni.' },
+          { text: 'Mengabaikan harakat dan artikulasi makhraj', isCorrect: false, feedback: 'Artikulasi makhraj dan harakat adalah pilar utama kefasihan fusha.' },
+          { text: 'Melewati latihan tanpa mempraktikkan pengucapan', isCorrect: false, feedback: 'Praktik lisan teratur adalah kunci utama kelancaran.' }
         ]
       }
     ],

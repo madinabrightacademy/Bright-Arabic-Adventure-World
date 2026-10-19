@@ -1,6 +1,6 @@
 {
   "name": "Brightoria Lisan - Pulau Bahasa Arab",
-  "description": "Game petualangan edukasi bahasa Arab interaktif untuk anak dan dewasa dengan 8 pulau keterampilan, companion burung Hudhud, mini-game 3D/2D seru, sistem XP, bintang, dan papan peringkat.",
+  "description": "Game petualangan edukasi bahasa Arab interaktif untuk anak dan dewasa dengan 9 pulau keterampilan, companion burung Hudhud, mini-game 3D/2D seru, sistem XP, bintang, dan papan peringkat.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -146,6 +146,9 @@ export interface UserProfile {
   dailyTargetChestClaimedDate?: string;
   dailyReadingCount?: number; // kata/huruf iqra dibaca hari ini
   dailyMinutesCount?: number; // menit belajar hari ini
+  lastDailyChestClaimDate?: string;
+  dailyXpDate?: string;
+  dailyXpAccumulated?: number;
 }
 
 export interface LeaderboardEntry {

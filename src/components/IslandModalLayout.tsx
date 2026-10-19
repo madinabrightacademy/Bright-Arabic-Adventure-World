@@ -61,6 +61,24 @@ export const IslandModalLayout: React.FC<IslandModalLayoutProps> = ({
   onClose,
   children
 }) => {
+  // Accessibility: Lock background scroll and handle Escape key
+  React.useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [onClose]);
+
   const handlePlayArabic = () => {
     sound.speakArabic(island.name_ar, 0.9);
   };
@@ -72,7 +90,12 @@ export const IslandModalLayout: React.FC<IslandModalLayoutProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div 
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="island-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto"
+    >
       <motion.div
         initial={{ scale: 0.94, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -121,7 +144,7 @@ export const IslandModalLayout: React.FC<IslandModalLayoutProps> = ({
 
                 {/* Island Names & Audio Speaker */}
                 <div className="flex items-baseline gap-2.5 mt-1">
-                  <h2 className="text-lg sm:text-2xl font-black font-chibi text-white flex items-center gap-1.5">
+                  <h2 id="island-modal-title" className="text-lg sm:text-2xl font-black font-chibi text-white flex items-center gap-1.5">
                     <span>{island.name_id}</span>
                   </h2>
                   <span className="text-xl sm:text-2xl font-arabic font-black text-amber-300">
@@ -130,7 +153,8 @@ export const IslandModalLayout: React.FC<IslandModalLayoutProps> = ({
                   <button
                     type="button"
                     onClick={handlePlayArabic}
-                    className="p-1 rounded-lg bg-white/15 hover:bg-white/25 active:scale-95 text-amber-300 transition-all cursor-pointer"
+                    aria-label={`Dengarkan pelafalan ${island.name_ar}`}
+                    className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 active:scale-95 text-amber-300 transition-all cursor-pointer"
                     title="Dengarkan pelafalan bahasa Arab"
                   >
                     <Volume2 className="w-4 h-4" />
@@ -143,7 +167,8 @@ export const IslandModalLayout: React.FC<IslandModalLayoutProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/15 hover:bg-white/30 text-white font-bold flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0 shadow-md border border-white/20"
+              aria-label="Tutup Modal Pulau"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/15 hover:bg-white/30 text-white font-bold flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0 shadow-md border border-white/20"
               title="Tutup Modal"
             >
               <X className="w-5 h-5" />

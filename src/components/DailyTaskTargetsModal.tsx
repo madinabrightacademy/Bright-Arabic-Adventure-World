@@ -48,11 +48,6 @@ export const DailyTaskTargetsModal: React.FC<DailyTaskTargetsModalProps> = ({
     }
   };
 
-  const handleSimulateMinutes = () => {
-    const updated = DailyTargetService.recordStudyMinutes(5);
-    onUpdateProfile(updated);
-    sound.playSparkle();
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md overflow-y-auto">
@@ -228,13 +223,10 @@ export const DailyTaskTargetsModal: React.FC<DailyTaskTargetsModalProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={handleSimulateMinutes}
-              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 font-bold text-xs rounded-xl shadow-2xs cursor-pointer"
-              title="Tambah 5 menit belajar"
-            >
-              +5 Menit
-            </button>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-xl border border-blue-200">
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
+              <span>Tercatat otomatis saat belajar</span>
+            </div>
           </div>
 
           {/* Grand Target Chest Reward Card */}

@@ -390,8 +390,13 @@ export const HudhudVoiceCoach: React.FC<HudhudVoiceCoachProps> = ({ profile, onR
         isPhonemeMatch = hitWords >= 1;
       }
     } else {
-      // Audio detected through sound wave analyser
-      matchPercentage = audioLevel > 15 ? 85 : 75;
+      // Audio detected only through sound wave analyser without recognized Arabic phonemes
+      if (audioLevel > 25) {
+        matchPercentage = 70; // Sound detected, but pronunciation needs clearer articulation
+      } else {
+        matchPercentage = 35; // Too quiet or silent
+      }
+      isPhonemeMatch = false;
     }
 
     const isPass = matchPercentage >= 78;
@@ -408,7 +413,7 @@ export const HudhudVoiceCoach: React.FC<HudhudVoiceCoachProps> = ({ profile, onR
       arabicSpoken = 'مُمْتَاز! لَفْظٌ فَصِيحٌ جِدًّا، أَحْسَنْتَ يَا بَطَل!';
       setHudhudMood('celebrate');
       sound.playFanfare();
-    } else if (matchPercentage >= 82) {
+    } else if (matchPercentage >= 78) {
       rating = 'jayyid_jiddan';
       ratingLabel = 'Jayyid Jiddan (Sangat Baik)';
       hudhudComment = `Bagus sekali! Bunyi makhraj ${currentPhrase.makhrajHighlight} sudah terdengar berbobot.`;
@@ -418,7 +423,9 @@ export const HudhudVoiceCoach: React.FC<HudhudVoiceCoachProps> = ({ profile, onR
     } else {
       rating = 'retry';
       ratingLabel = 'Mari Coba Lagi!';
-      hudhudComment = currentPhrase.coachAdvice;
+      hudhudComment = audioLevel <= 25 
+        ? 'Suara belum terdengar jelas. Dekatkan suaramu ke mikrofon dan ucapkan dengan lantang!' 
+        : currentPhrase.coachAdvice;
       arabicSpoken = 'حَاوِلْ مَرَّةً أُخْرَى، أَنْتَ تَسْتَطِيع!';
       setHudhudMood('coach');
       sound.playGentleRetry();

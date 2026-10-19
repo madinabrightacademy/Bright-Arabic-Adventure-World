@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Star, Award, CheckCircle2, Lock, X, ArrowRight, Shield } from 'lucide-react';
 import { AchievementItem } from '../data/achievements';
@@ -19,9 +19,20 @@ export const AchievementBadgeModal: React.FC<AchievementBadgeModalProps> = ({
   onClose,
   onClaim
 }) => {
-  if (!achievement) return null;
-
   const [hasCelebrated, setHasCelebrated] = useState(false);
+
+  // Keyboard accessibility: Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  if (!achievement) return null;
   const isUnlocked = achievement.isUnlocked(profile);
   const isClaimed = (profile.achievements || []).includes(achievement.id);
   const currentVal = achievement.currentProgress(profile);

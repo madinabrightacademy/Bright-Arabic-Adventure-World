@@ -189,9 +189,6 @@ export const PearlChainGame: React.FC<PearlChainProps> = ({ onClose, onReward })
       setMascotMood('celebrate');
       setMascotComment(`Mumtaz! Untaian kata "${puzzle.wordAr}" bersambung sempurna!`);
 
-      GameStorage.addReward(45, 2, 'kitabah', 7);
-      onReward(45, 2);
-
       setTimeout(() => {
         if (puzzleIdx < CHAIN_PUZZLES.length - 1) {
           setIsAssembled(false);
@@ -241,6 +238,9 @@ export const PearlChainGame: React.FC<PearlChainProps> = ({ onClose, onReward })
         setIsAssembled(false);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="kitabah"
+      traitPoints={15}
       currentRound={puzzleIdx + 1}
       totalRounds={CHAIN_PUZZLES.length}
       score={puzzleIdx + 1}

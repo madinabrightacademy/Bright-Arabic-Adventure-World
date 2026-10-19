@@ -93,10 +93,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1">
-                <span className="font-black text-xs text-slate-800 leading-none">
+                <span className="font-black text-xs text-slate-800 leading-none max-w-[70px] sm:max-w-[110px] truncate block">
                   {profile.name}
                 </span>
-                <span className="text-[10px] bg-teal-600 text-white font-extrabold px-1.5 py-0.2 rounded-full leading-none">
+                <span className="text-[10px] bg-teal-600 text-white font-extrabold px-1.5 py-0.2 rounded-full leading-none shrink-0">
                   {profile.rutbah}
                 </span>
               </div>
@@ -316,7 +316,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleMute}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer"
+            aria-label={isMuted ? 'Nyalakan Suara Game' : 'Matikan Suara Game'}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer"
             title={isMuted ? 'Nyalakan Suara' : 'Matikan Suara'}
           >
             {isMuted ? (
@@ -330,7 +331,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleMobileFrame}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer ${
+            aria-label={isMobileFrame ? 'Beralih ke Tampilan Desktop' : 'Beralih ke Simulasi Ponsel Mobile'}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 shadow-2xs cursor-pointer ${
               isMobileFrame ? 'bg-teal-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
             title={isMobileFrame ? 'Tampilan Desktop Lebar' : 'Simulasi Android Mobile Phone'}

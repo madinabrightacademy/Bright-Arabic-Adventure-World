@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Volume2, Award, Sparkles, CheckCircle2, ChevronRight, ChevronLeft, Feather, BookOpen, Heart } from 'lucide-react';
 import { sound } from '../../services/sound';
@@ -139,6 +139,19 @@ export const HudhudLetterModal: React.FC<HudhudLetterProps> = ({ onClose, onRewa
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showWisdom, setShowWisdom] = useState(false);
+
+  useEffect(() => {
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = orig;
+    };
+  }, [onClose]);
 
   const currentLetter = HUDHUD_ALL_LETTERS[selectedIdx];
   const isAnswered = answers[currentLetter.id] !== undefined;

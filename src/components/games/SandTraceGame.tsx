@@ -197,8 +197,6 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
     if (!completedLetters.includes(charKey)) {
       const nextCompleted = [...completedLetters, charKey];
       setCompletedLetters(nextCompleted);
-      GameStorage.addReward(35, 1, 'kitabah', 3);
-      onReward(35, 1);
 
       if (nextCompleted.length >= Math.min(5, filteredLetters.length)) {
         setTimeout(() => {
@@ -255,7 +253,7 @@ export const SandTraceGame: React.FC<SandTraceProps> = ({ onClose, onReward }) =
 
   return (
     <BaseGameModal
-      title="Jejak Pasir Pantai Huruf"
+      title="Sand Trace (Jejak Pasir Mutiara)"
       titleAr="أَثَرُ الرِّمَالِ فِي الشَّاطِئِ"
       islandName="Pulau Huruf"
       islandColor="from-amber-500 via-orange-500 to-amber-700"

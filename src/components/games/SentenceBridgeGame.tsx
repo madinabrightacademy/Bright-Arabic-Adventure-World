@@ -160,9 +160,6 @@ export const SentenceBridgeGame: React.FC<SentenceBridgeProps> = ({ onClose, onR
       setMascotMood('celebrate');
       setMascotComment('Mumtaz! Jembatan kokoh terhubung sempurna!');
 
-      GameStorage.addReward(50, 2, 'lughah', 8);
-      onReward(50, 2);
-
       setTimeout(() => {
         if (levelIdx < BRIDGE_LEVELS.length - 1) {
           setIsCrossed(false);

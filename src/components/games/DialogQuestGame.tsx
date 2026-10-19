@@ -17,6 +17,7 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
   const dialogNodes = DIALOGUES_DATA[selectedScenarioKey] || DIALOGUES_DATA.greeting_market;
   const [currentNodeId, setCurrentNodeId] = useState(dialogNodes[0].id);
   const [history, setHistory] = useState<{ speaker: string; text: string; isUser?: boolean }[]>([]);
+  const [score, setScore] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [mascotMood, setMascotMood] = useState<'happy' | 'cheer' | 'thinking' | 'celebrate'>('happy');
@@ -40,17 +41,18 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
   };
 
   const handleSelectChoice = (choice: { ar: string; translit: string; id_translation: string; score: number; feedback?: string; nextId?: string }) => {
-    sound.speakArabic(choice.ar);
-    if (choice.feedback) {
-      sound.playGentleRetry();
-      setFeedback(choice.feedback);
-      setMascotMood('thinking');
-      setMascotComment(choice.feedback);
-    } else {
+    const isAccurate = choice.score > 0 && !choice.feedback;
+    if (isAccurate) {
       sound.playSuccess();
       setFeedback(null);
+      setScore(s => s + 1);
       setMascotMood('celebrate');
       setMascotComment('Mumtaz! Jawaban percakapanmu sangat santun dan tepat!');
+    } else {
+      sound.playGentleRetry();
+      setFeedback(choice.feedback || 'Pilihan respon kurang tepat atau kurang santun.');
+      setMascotMood('thinking');
+      setMascotComment(choice.feedback || 'Pilihlah kalimat yang lebih sopan dan sesuai adab.');
     }
 
     setHistory(prev => [
@@ -67,26 +69,17 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
       }, 900);
     } else {
       // Completed conversation
-      GameStorage.addReward(60, 3, 'lisan', 10);
-      onReward(60, 3);
       setTimeout(() => {
         setFlowState('VICTORY');
       }, 1200);
     }
   };
 
-  const toggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        sound.playSparkle();
-        setMascotMood('cheer');
-        setMascotComment('Masya Allah! Pelafalan lisanmu semakin fasih!');
-      }, 2000);
-    } else {
-      setIsRecording(false);
-    }
+  const handleTalqinPractice = () => {
+    sound.speakArabic(currentNode.ar);
+    sound.playSparkle();
+    setMascotMood('cheer');
+    setMascotComment('Dengarkan lafal fusha penutur asli, lalu tirukan dengan santun dan lantang!');
   };
 
   return (
@@ -119,12 +112,15 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
         setFeedback(null);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lisan"
+      traitPoints={10}
       currentRound={history.length / 2 + 1}
       totalRounds={dialogNodes.length}
-      score={Math.floor(history.length / 2) + 1}
+      score={score}
       maxScore={dialogNodes.length}
-      starsEarned={3}
-      xpEarned={60}
+      starsEarned={score >= dialogNodes.length * 0.8 ? 3 : score >= dialogNodes.length * 0.5 ? 2 : 1}
+      xpEarned={Math.max(25, score * 20)}
       mascotMood={mascotMood}
       mascotComment={mascotComment}
       mascotArabic="حِوَارٌ"
@@ -246,19 +242,15 @@ export const DialogQuestGame: React.FC<DialogQuestProps> = ({ onClose, onReward 
       {/* Voice Practice Button */}
       <div className="pt-2 flex items-center justify-between">
         <span className="text-[11px] text-slate-500 font-semibold">
-          Latih ucapan langsung dengan mic:
+          Latihan Talqin (Simak & Tirukan):
         </span>
         <button
           type="button"
-          onClick={toggleRecording}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-            isRecording
-              ? 'bg-rose-500 text-white animate-pulse'
-              : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300'
-          }`}
+          onClick={handleTalqinPractice}
+          className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-emerald-100 hover:bg-emerald-200 text-emerald-950 border border-emerald-300 shadow-2xs active:scale-95"
         >
-          {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-          <span>{isRecording ? 'Mendengarkan...' : 'Coba Ucapkan'}</span>
+          <Volume2 className="w-3.5 h-3.5 text-emerald-700" />
+          <span>Talqin Kalimat Ini</span>
         </button>
       </div>
     </GameShell>

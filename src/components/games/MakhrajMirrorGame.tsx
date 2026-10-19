@@ -135,22 +135,22 @@ export const MakhrajMirrorGame: React.FC<MakhrajMirrorProps> = ({ onClose, onRew
   const handleTestVoice = () => {
     setIsRecording(true);
     sound.speakArabic(makhraj.letter);
+    setMascotMood('cheer');
+    setMascotComment(`Simak titik letup ${makhraj.name} (${makhraj.letter}), lalu tirukan dengan jelas!`);
+
     setTimeout(() => {
       setIsRecording(false);
       sound.playSuccess();
       setTestedCount(c => c + 1);
       setMascotMood('celebrate');
-      setMascotComment(`Mumtaz! Getaran makhraj ${makhraj.name} terdengar fasih!`);
-
-      GameStorage.addReward(40, 2, 'lisan', 6);
-      onReward(40, 2);
+      setMascotComment(`Mumtaz! Latihan artikulasi ${makhraj.name} (${makhraj.letter}) berhasil disimak & dilatih!`);
 
       if (testedCount + 1 >= 3) {
         setTimeout(() => {
           setFlowState('VICTORY');
-        }, 1200);
+        }, 1000);
       }
-    }, 2000);
+    }, 1200);
   };
 
   return (
@@ -181,6 +181,9 @@ export const MakhrajMirrorGame: React.FC<MakhrajMirrorProps> = ({ onClose, onRew
         setTestedCount(0);
       }}
       onClose={onClose}
+      onReward={onReward}
+      rewardTrait="lisan"
+      traitPoints={12}
       currentRound={testedCount + 1}
       totalRounds={3}
       score={testedCount}
@@ -292,12 +295,12 @@ export const MakhrajMirrorGame: React.FC<MakhrajMirrorProps> = ({ onClose, onRew
           onClick={handleTestVoice}
           className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer ${
             isRecording
-              ? 'bg-rose-500 text-white animate-pulse'
+              ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300 animate-pulse'
               : 'bg-teal-700 hover:bg-teal-800 text-white active:scale-95'
           }`}
         >
-          {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-          <span>{isRecording ? 'Mendengarkan...' : 'Uji Pelafalan'}</span>
+          {isRecording ? <Volume2 className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+          <span>{isRecording ? 'Menyimak Lafal...' : 'Latihan Talqin & Tirukan'}</span>
         </button>
       </div>
     </GameShell>

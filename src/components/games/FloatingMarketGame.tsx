@@ -118,8 +118,6 @@ export const FloatingMarketGame: React.FC<FloatingMarketProps> = ({ onClose, onR
       setMascotComment(`Mumtaz! ${item.name_id} berhasil diserahkan ke pembeli!`);
 
       GameStorage.markWordLearned(item.id);
-      GameStorage.addReward(40, 2, 'lughah', 6);
-      onReward(40, 2);
 
       setTimeout(() => {
         setSuccessItem(null);
